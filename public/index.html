@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico">
+  <title>UNGRD — Panel</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+  <h1>🖥️ NES-UNGRD</h1>
+  <div class="header-right">
+    <div class="dropdown">
+      <a href="/api/descargar-agente" class="btn-export" style="text-decoration:none;background:#6c757d;">📦 Instalador</a>
+      <button class="btn-export" onclick="toggleDropdown()">⬇️ Exportar ▾</button>
+      <div class="dropdown-menu" id="exportMenu">
+        <a href="/api/export/excel">📊 Reporte de equipos (.xlsx)</a>
+        <a href="/api/export/pdf">📄 Reporte de equipos (PDF)</a>
+        <div style="height:2px; background:#3498db; margin:6px 8px; border-radius:2px;"></div>
+        <a href="/api/export/historial-excel">📊 Historial de limpiezas (.xlsx)</a>
+        <a href="/api/export/historial-pdf">📄 Historial de limpiezas (PDF)</a>
+        <div style="height:2px; background:#3498db; margin:6px 8px; border-radius:2px;"></div>
+        <a href="/api/export/programas-excel">📊 Inventario de programas (.xlsx)</a>
+        <a href="/api/export/programas-pdf">📄 Inventario de programas (PDF)</a>
+      </div>
+    </div>
+    <a href="/dashboard.html" class="btn-dashboard">📊 Gráfica</a>
+    
+    <span class="stats" id="statsPcs" style="cursor:pointer;" title=""><span id="totalPcs">0</span> PCs</span>
+    <button id="btnDark" onclick="toggleDark()" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:white;cursor:pointer;font-size:0.9rem;margin-right:4px;">🌙</button>
+    <a href="/api/logout" class="btn-logout">⏻ Salir</a> 
+ </div>
+</header>
+
+ <main>
+    <div class="filters">
+  <input type="text" id="buscar" placeholder="Buscar por nombre, serial o IP...">
+  <select id="porPagina" onchange="cambiarPagina()">
+    <option value="50">50 por página</option>
+    <option value="100">100 por página</option>
+    <option value="200">200 por página</option>
+    <option value="0">Todos</option>
+  </select>
+  <div class="col-toggle-wrap" style="position:relative;display:inline-block;">
+    <button class="btn-cols-toggle" onclick="toggleColMenu()" style="cursor:pointer;">👁 Columnas ▾</button>
+    <div id="colMenu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;border-radius:8px;padding:8px 4px;min-width:170px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.12);" class="col-menu-box">
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(0)"> Estado</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(1)"> Serial</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(2)"> Modelo</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(3)"> Usuario</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(4)"> IP</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(5)"> Disco libre</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(6)"> Última limpieza</label>
+      <label class="col-menu-label" style="display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;padding:5px 12px;font-size:13px;cursor:pointer;"><input type="checkbox" checked onchange="toggleCol(7)"> GB liberados</label>
+    </div>
+  </div>
+  <button onclick="cargarPcs()">🔄 Actualizar</button>
+</div>
+
+    <table>
+<thead>
+  <tr>
+    <th onclick="setSort('estado')" style="cursor:pointer">Estado ⇅</th>
+    <th onclick="setSort('serial')" style="cursor:pointer">Serial ⇅</th>
+          <th onclick="setSort('modelo')" style="cursor:pointer">Modelo ⇅</th>
+    <th onclick="setSort('usuario')" style="cursor:pointer">Usuario ⇅</th>
+    <th onclick="setSort('ip_local')" style="cursor:pointer">IP ⇅</th>
+    <th onclick="setSort('espacio_libre_gb')" style="cursor:pointer">Disco libre ⇅</th>
+    <th onclick="setSort('ultima_limpieza')" style="cursor:pointer">Última limpieza ⇅</th>
+    <th onclick="setSort('mb_liberados_ultima')" style="cursor:pointer">GB liberados ⇅</th>
+    <th>Acción</th>
+  </tr>
+</thead>
+      
+     <tbody id="tablaPcs"></tbody>
+    </table>
+  </main>
+
+
+<!-- Modal Programas -->
+<div id="modalProgramas" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:10px; padding:2rem; width:90%; max-width:700px;
+              max-height:80vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h2 id="programasTitulo" style="color:#2c3e50; font-size:1.2rem;">Programas instalados</h2>
+      <button onclick="cerrarProgramas()"
+        style="background:#e74c3c; color:white; border:none; border-radius:6px;
+               padding:0.4rem 0.8rem; cursor:pointer;">✕</button>
+    </div>
+    <input id="buscarPrograma" oninput="filtrarProgramas()" placeholder="Buscar programa..."
+      style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:6px;
+             margin-bottom:1rem; font-size:0.9rem; box-sizing:border-box;">
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:left; font-size:0.85rem;">Programa</th>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:left; font-size:0.85rem;">Version</th>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:left; font-size:0.85rem;">Fabricante</th>
+        </tr>
+      </thead>
+      <tbody id="tablaProgramas"></tbody>
+    </table>
+    <p id="sinProgramas" style="text-align:center; color:#999; padding:2rem; display:none;">
+      Sin datos de programas instalados
+    </p>
+  </div>
+</div>
+
+<!-- historial -->
+
+<!-- Modal Configuracion -->
+<div id="modalUSB" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; width:90%; max-width:460px;
+              box-shadow:0 10px 30px rgba(0,0,0,0.3); overflow:hidden;">
+    <!-- Header -->
+    <div style="background:#2c3e50; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-size:1.2rem;">⚙️</span>
+        <h2 id="usbTitulo" style="color:white; font-size:1rem; margin:0;">Configuracion</h2>
+      </div>
+      <button onclick="cerrarUSB()"
+        style="background:rgba(255,255,255,0.2); color:white; border:none; border-radius:6px;
+               padding:0.3rem 0.7rem; cursor:pointer; font-size:0.9rem;">✕</button>
+    </div>
+    <!-- Contenido -->
+    <div style="padding:1.5rem;">
+      <!-- Seccion USB -->
+      <div style="background:#f8f9fa; border-radius:8px; padding:1rem; margin-bottom:1rem;
+                  border-left:4px solid #3498db;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:600; color:#2c3e50; margin-bottom:0.2rem;">🔌 Puertos USB</div>
+            <div id="usbEstado" style="font-size:0.85rem;"></div>
+          </div>
+          <button id="usbBtn" onclick="toggleUSB()"
+            style="padding:0.5rem 1.2rem; border:none; border-radius:6px; font-size:0.85rem;
+                   font-weight:600; cursor:pointer; color:white; transition:background 0.2s; white-space:nowrap;">
+          </button>
+        </div>
+      </div>
+      <!-- Espacio para futuras opciones -->
+      <div style="color:#aaa; font-size:0.8rem; text-align:center; padding:0.5rem;">
+        Mas opciones proximamente
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalHistorial" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:10px; padding:2rem; width:90%; max-width:700px;
+              max-height:80vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h2 id="modalTitulo" style="color:#2c3e50; font-size:1.2rem;">Historial</h2>
+      <button onclick="cerrarHistorial()"
+        style="background:#e74c3c; color:white; border:none; border-radius:6px;
+               padding:0.4rem 0.8rem; cursor:pointer; font-size:0.9rem;">✕ Cerrar</button>
+    </div>
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+      <label style="font-size:0.85rem; color:#555;">Desde:</label>
+      <input type="date" id="histDesde" style="border:1px solid #ddd; border-radius:6px; padding:0.3rem 0.5rem; font-size:0.85rem;">
+      <label style="font-size:0.85rem; color:#555;">Hasta:</label>
+      <input type="date" id="histHasta" style="border:1px solid #ddd; border-radius:6px; padding:0.3rem 0.5rem; font-size:0.85rem;">
+      <button onclick="filtrarHistorial()"
+        style="background:#3498db; color:white; border:none; border-radius:6px;
+               padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem;">🔍 Filtrar</button>
+      <button onclick="exportarHistorialExcel()"
+        style="background:#27ae60; color:white; border:none; border-radius:6px;
+               padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem;">📊 Excel</button>
+      <button onclick="exportarHistorialPDF()"
+        style="background:#c0392b; color:white; border:none; border-radius:6px;
+               padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem;">📄 PDF</button>
+    </div>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:center; font-size:0.85rem;">Fecha</th>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:center; font-size:0.85rem;">GB liberados</th>
+          <th style="background:#34495e; color:white; padding:0.7rem; text-align:center; font-size:0.85rem;">Disco libre</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHistorial"></tbody>
+    </table>
+    <p id="sinHistorial" style="text-align:center; color:#999; padding:2rem; display:none;">
+      Sin registros de limpiezas
+    </p>
+  </div>
+</div>
+
+
+
+  <script src="/app.js"></script>
+
+<!-- Modal Detalles PC -->
+<div id="modalDetalles" style="display:none;position:fixed;inset:0;background:#0007;z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 id="detalleTitulo" style="margin:0;color:#2c3e50;font-size:1.1rem;"></h3>
+      <button onclick="cerrarDetalles()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#999;line-height:1;">✕</button>
+    </div>
+    <div id="detalleContenido"></div>
+  </div>
+</div>
+<script>
+  function toggleDark() {
+    const isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('dark', isDark ? '1' : '0');
+    document.getElementById('btnDark').textContent = isDark ? '☀️' : '🌙';
+  }
+  if (localStorage.getItem('dark') === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('btnDark').textContent = '☀️';
+  }
+</script>
+<script>
+let _clicksPcs = 0, _timerPcs;
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("statsPcs").addEventListener("click", function(){
+    _clicksPcs++;
+    clearTimeout(_timerPcs);
+    if(_clicksPcs >= 5){
+      _clicksPcs = 0;
+      window.location.href = '/limpieza';
+    }
+    _timerPcs = setTimeout(function(){ _clicksPcs = 0; }, 2000);
+  });
+});
+</script>
+</body>
+</html>
