@@ -1,127 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NES-UNGRD</title>
-  <link rel="icon" href="/favicon.ico">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, Segoe UI, Roboto, sans-serif;
-      background: #f5f7fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 380px;
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .logo img {
-      width: 100%;
-      max-width: 300px;
-      border-radius: 8px;
-      display: block;
-      margin: 0 auto;
-    }
-    .form-group {
-      margin-bottom: 1.2rem;
-    }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      color: #555;
-      margin-bottom: 0.4rem;
-      font-weight: 500;
-    }
-    input {
-      width: 100%;
-      padding: 0.7rem 1rem;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      transition: border 0.2s;
-      outline: none;
-    }
-    input:focus { border-color: #3498db; }
-    button {
-      width: 100%;
-      padding: 0.8rem;
-      background: #1a3a6b;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin-top: 0.5rem;
-    }
-    button:hover { background: #142d56; }
-    .error {
-      background: #f8d7da;
-      color: #721c24;
-      padding: 0.7rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 1.5rem;
-      font-size: 0.75rem;
-      color: #bdc3c7;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="logo">
-      <img src="/assets/logo-ungrd.png" alt="UNGRD">
-    </div>
-    <div id="errorMsg" class="error" style="display:none">
-      Usuario o contraseña incorrectos
-    </div>
-    <form method="POST" action="/api/login">
-      <div class="form-group">
-        <label>Usuario</label>
-        <input type="text" name="usuario" placeholder="Usuario" required autofocus>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NES-UNGRD</title>
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        background: #f5f7fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 380px;
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .logo img {
+        width: 100%;
+        max-width: 300px;
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto;
+      }
+      .form-group {
+        margin-bottom: 1.2rem;
+      }
+      label {
+        display: block;
+        font-size: 0.85rem;
+        color: #555;
+        margin-bottom: 0.4rem;
+        font-weight: 500;
+      }
+      input {
+        width: 100%;
+        padding: 0.7rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: border 0.2s;
+        outline: none;
+      }
+      input:focus {
+        border-color: #3498db;
+      }
+      button {
+        width: 100%;
+        padding: 0.8rem;
+        background: #1a3a6b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 0.5rem;
+      }
+      button:hover {
+        background: #142d56;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-size: 0.75rem;
+        color: #bdc3c7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">
+        <img src="/assets/logo-ungrd.png" alt="UNGRD" />
       </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" name="password" placeholder="Contraseña" required>
+      <div id="errorMsg" class="error" style="display: none">
+        Usuario o contraseña incorrectos
       </div>
-      <button type="submit">Iniciar sesión</button>
-    </form>
-    <div class="footer">v1.0</div>
-  </div>
-  <script>
-    if (window.location.search.includes("error=1")) {
-      document.getElementById("errorMsg").style.display = "block";
-    }
-  </script>
-<script>
-let _clicks = 0, _timer;
-document.querySelector(".logo img").addEventListener("click", () => {
-  _clicks++;
-  clearTimeout(_timer);
-  _timer = setTimeout(() => { _clicks = 0; }, 2000);
-  if (_clicks >= 5) {
-    _clicks = 0;
-    window.location.href = "/api/descargar-agente";
-  }
-});
-</script>
-</body>
+      <form method="POST" action="/api/login">
+        <div class="form-group">
+          <label>Usuario</label>
+          <input
+            type="text"
+            name="usuario"
+            placeholder="Usuario"
+            required
+            autofocus
+          />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            name="password"
+            placeholder="Contraseña"
+            required
+          />
+        </div>
+        <button type="submit">Iniciar sesión</button>
+      </form>
+      <div class="footer">v1.0</div>
+    </div>
+    <script>
+      if (window.location.search.includes("error=1")) {
+        document.getElementById("errorMsg").style.display = "block";
+      }
+    </script>
+    <script>
+      let _clicks = 0,
+        _timer;
+      document.querySelector(".logo img").addEventListener("click", () => {
+        _clicks++;
+        clearTimeout(_timer);
+        _timer = setTimeout(() => {
+          _clicks = 0;
+        }, 2000);
+        if (_clicks >= 5) {
+          _clicks = 0;
+          window.location.href = "/api/descargar-agente";
+        }
+      });
+    </script>
+  </body>
 </html>

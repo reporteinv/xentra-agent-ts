@@ -1,94 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico">
-  <title>Limpieza masiva — UNGRD</title>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/limpieza.css">
-</head>
-<body>
-  <header>
-    <h1>🧹 Limpieza masiva</h1>
-    <div class="header-right">
-      <button id="btnDark" onclick="toggleDark()" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:white;cursor:pointer;font-size:0.9rem;margin-right:8px;">🌙</button>
-      <a href="/" class="btn-dashboard" style="text-decoration:none;">← Volver</a>
-    </div>
-  </header>
-  <main>
-    <section class="lm-top">
-      <div class="lm-info">
-        <p id="lm-subtitulo" style="color:#888;font-size:0.9rem;margin:0;">Selecciona una campaña o inicia una nueva</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Limpieza masiva — UNGRD</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/limpieza.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🧹 Limpieza masiva</h1>
+      <div class="header-right">
+        <button
+          id="btnDark"
+          onclick="toggleDark()"
+          style="
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 8px;
+          "
+        >
+          🌙
+        </button>
+        <a href="/" class="btn-dashboard" style="text-decoration: none"
+          >← Volver</a
+        >
       </div>
-      <button class="btn-limpiar" id="btnLimpiarMasivo" onclick="iniciarLimpieza()">⚡ Nueva limpieza masiva</button>
-    </section>
+    </header>
+    <main>
+      <section class="lm-top">
+        <div class="lm-info">
+          <p
+            id="lm-subtitulo"
+            style="color: #888; font-size: 0.9rem; margin: 0"
+          >
+            Selecciona una campaña o inicia una nueva
+          </p>
+        </div>
+        <button
+          class="btn-limpiar"
+          id="btnLimpiarMasivo"
+          onclick="iniciarLimpieza()"
+        >
+          ⚡ Nueva limpieza masiva
+        </button>
+      </section>
 
-    <!-- KPIs -->
-    <section class="kpis" id="lm-kpis" style="display:none;">
-      <div class="kpi"><div class="kpi-label">Total PCs</div><div class="kpi-value" id="kpi-total">0</div></div>
-      <div class="kpi kpi-activo"><div class="kpi-label">Ejecutados</div><div class="kpi-value" id="kpi-ejec">0</div></div>
-      <div class="kpi kpi-alerta"><div class="kpi-label">Pendientes</div><div class="kpi-value" id="kpi-pend">0</div></div>
-      <div class="kpi kpi-inactivo"><div class="kpi-label">Expirados</div><div class="kpi-value" id="kpi-exp">0</div></div>
-    </section>
+      <!-- KPIs -->
+      <section class="kpis" id="lm-kpis" style="display: none">
+        <div class="kpi">
+          <div class="kpi-label">Total PCs</div>
+          <div class="kpi-value" id="kpi-total">0</div>
+        </div>
+        <div class="kpi kpi-activo">
+          <div class="kpi-label">Ejecutados</div>
+          <div class="kpi-value" id="kpi-ejec">0</div>
+        </div>
+        <div class="kpi kpi-alerta">
+          <div class="kpi-label">Pendientes</div>
+          <div class="kpi-value" id="kpi-pend">0</div>
+        </div>
+        <div class="kpi kpi-inactivo">
+          <div class="kpi-label">Expirados</div>
+          <div class="kpi-value" id="kpi-exp">0</div>
+        </div>
+      </section>
 
-    <!-- Barra progreso -->
-    <section id="lm-progreso" style="display:none;margin-bottom:1.5rem;">
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#888;margin-bottom:4px;">
-        <span>Progreso</span><span id="lm-prog-txt">0 / 0</span>
-      </div>
-      <div class="prog-track">
-        <div class="prog-ok" id="prog-ok"></div>
-        <div class="prog-pend" id="prog-pend"></div>
-        <div class="prog-exp" id="prog-exp"></div>
-      </div>
-      <div class="prog-leyenda">
-        <span><span class="dot dot-ok"></span>Ejecutado</span>
-        <span><span class="dot dot-pend"></span>Pendiente</span>
-        <span><span class="dot dot-exp"></span>Expirado</span>
-      </div>
-    </section>
+      <!-- Barra progreso -->
+      <section id="lm-progreso" style="display: none; margin-bottom: 1.5rem">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 4px;
+          "
+        >
+          <span>Progreso</span><span id="lm-prog-txt">0 / 0</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-ok" id="prog-ok"></div>
+          <div class="prog-pend" id="prog-pend"></div>
+          <div class="prog-exp" id="prog-exp"></div>
+        </div>
+        <div class="prog-leyenda">
+          <span><span class="dot dot-ok"></span>Ejecutado</span>
+          <span><span class="dot dot-pend"></span>Pendiente</span>
+          <span><span class="dot dot-exp"></span>Expirado</span>
+        </div>
+      </section>
 
-    <!-- Historial campañas -->
-    <section style="margin-bottom:1.5rem;">
-      <h3 style="font-size:0.95rem;margin-bottom:0.8rem;">Historial de campañas</h3>
-      <div id="lm-campanas" class="campanas-grid"></div>
-    </section>
+      <!-- Historial campañas -->
+      <section style="margin-bottom: 1.5rem">
+        <h3 style="font-size: 0.95rem; margin-bottom: 0.8rem">
+          Historial de campañas
+        </h3>
+        <div id="lm-campanas" class="campanas-grid"></div>
+      </section>
 
-    <!-- Tabla detalle -->
-    <section id="lm-detalle-wrap" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
-        <h3 style="font-size:0.95rem;margin:0;">Detalle de PCs</h3>
-        <input type="text" id="lm-buscar" placeholder="Buscar PC..." oninput="filtrarTabla()" style="padding:6px 10px;border-radius:6px;border:1px solid #ddd;font-size:0.85rem;width:200px;">
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="lm-table" id="lm-tabla">
-          <thead>
-            <tr>
-              <th>Serial</th>
-              <th>PC</th>
-              <th>Modelo</th>
-              <th>Estado</th>
-              <th>Ejecutado</th>
-              <th>GB liberados</th>
-            </tr>
-          </thead>
-          <tbody id="lm-tbody"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-  <script src="/limpieza.js"></script>
-  <script>
-    function toggleDark() {
-      const isDark = document.body.classList.toggle('dark');
-      localStorage.setItem('dark', isDark ? '1' : '0');
-      document.getElementById('btnDark').textContent = isDark ? '☀️' : '🌙';
-    }
-    if (localStorage.getItem('dark') === '1') {
-      document.body.classList.add('dark');
-      document.getElementById('btnDark').textContent = '☀️';
-    }
-  </script>
-</body>
+      <!-- Tabla detalle -->
+      <section id="lm-detalle-wrap" style="display: none">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+          "
+        >
+          <h3 style="font-size: 0.95rem; margin: 0">Detalle de PCs</h3>
+          <input
+            type="text"
+            id="lm-buscar"
+            placeholder="Buscar PC..."
+            oninput="filtrarTabla()"
+            style="
+              padding: 6px 10px;
+              border-radius: 6px;
+              border: 1px solid #ddd;
+              font-size: 0.85rem;
+              width: 200px;
+            "
+          />
+        </div>
+        <div style="overflow-x: auto">
+          <table class="lm-table" id="lm-tabla">
+            <thead>
+              <tr>
+                <th>Serial</th>
+                <th>PC</th>
+                <th>Modelo</th>
+                <th>Estado</th>
+                <th>Ejecutado</th>
+                <th>GB liberados</th>
+              </tr>
+            </thead>
+            <tbody id="lm-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="/limpieza.js"></script>
+    <script>
+      function toggleDark() {
+        const isDark = document.body.classList.toggle("dark");
+        localStorage.setItem("dark", isDark ? "1" : "0");
+        document.getElementById("btnDark").textContent = isDark ? "☀️" : "🌙";
+      }
+      if (localStorage.getItem("dark") === "1") {
+        document.body.classList.add("dark");
+        document.getElementById("btnDark").textContent = "☀️";
+      }
+    </script>
+  </body>
 </html>

@@ -1,24 +1,38 @@
-import express = require('express');
-import { Request, Response } from 'express';
-import pool = require('../db');
-import { RowDataPacket } from 'mysql2/promise';
+import express = require("express");
+import { Request, Response } from "express";
+import pool = require("../db");
+import { RowDataPacket } from "mysql2/promise";
 
 const router = express.Router();
 
-router.post('/api/limpiar-masivo', async (req: Request, res: Response) => {
+router.post("/api/limpiar-masivo", async (req: Request, res: Response) => {
   try {
     const [pcsActivos] = await pool.query<RowDataPacket[]>(
-      "SELECT id FROM pcs WHERE activo=1 AND ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
-    if (!(pcsActivos as any[]).length) return res.status(400).json({ error: 'No hay PCs activos' });
-    const [camp]: any = await pool.query("INSERT INTO campanas_limpieza (total_pcs) VALUES (?)", [(pcsActivos as any[]).length]);
+      "SELECT id FROM pcs WHERE activo=1 AND ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+    );
+    if (!(pcsActivos as any[]).length)
+      return res.status(400).json({ error: "No hay PCs activos" });
+    const [camp]: any = await pool.query(
+      "INSERT INTO campanas_limpieza (total_pcs) VALUES (?)",
+      [(pcsActivos as any[]).length],
+    );
     const campanaId = camp.insertId;
     const valores = (pcsActivos as any[]).map((p: any) => [campanaId, p.id]);
-    await pool.query("INSERT INTO comandos_limpieza (campana_id, pc_id) VALUES ?", [valores]);
-    res.json({ ok: true, campana_id: campanaId, total: (pcsActivos as any[]).length });
-  } catch(e: any) { res.status(500).json({ error: e.message }); }
+    await pool.query(
+      "INSERT INTO comandos_limpieza (campana_id, pc_id) VALUES ?",
+      [valores],
+    );
+    res.json({
+      ok: true,
+      campana_id: campanaId,
+      total: (pcsActivos as any[]).length,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get('/api/limpieza/campanas', async (req: Request, res: Response) => {
+router.get("/api/limpieza/campanas", async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(`
       SELECT c.*,
@@ -29,19 +43,28 @@ router.get('/api/limpieza/campanas', async (req: Request, res: Response) => {
       GROUP BY c.id ORDER BY c.fecha_creacion DESC LIMIT 10
     `);
     res.json(rows);
-  } catch(e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get('/api/limpieza/detalle/:id', async (req: Request, res: Response) => {
+router.get("/api/limpieza/detalle/:id", async (req: Request, res: Response) => {
   try {
-    await pool.query("UPDATE comandos_limpieza SET estado='expirado' WHERE estado='pendiente' AND fecha_expiracion <= NOW()");
-    const [rows] = await pool.query<RowDataPacket[]>(`
+    await pool.query(
+      "UPDATE comandos_limpieza SET estado='expirado' WHERE estado='pendiente' AND fecha_expiracion <= NOW()",
+    );
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `
       SELECT cl.*, p.nombre_equipo, p.serial, p.modelo, p.ultimo_reporte
       FROM comandos_limpieza cl JOIN pcs p ON p.id=cl.pc_id
       WHERE cl.campana_id=? ORDER BY cl.estado ASC, cl.fecha_ejecucion DESC
-    `, [req.params.id]);
+    `,
+      [req.params.id],
+    );
     res.json(rows);
-  } catch(e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export = router;
