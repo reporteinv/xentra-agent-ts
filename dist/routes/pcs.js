@@ -5,6 +5,7 @@ const path = require("path");
 const archiver = require("archiver");
 const fs = require("fs");
 const lenovo_lookup_1 = require("../modules/lenovo-lookup");
+const ip_lookup_1 = require("../modules/ip-lookup");
 const router = express.Router();
 function limpiarUsuario(usuario) {
     if (!usuario)
@@ -106,6 +107,8 @@ router.post("/api/reportar", async (req, res) => {
                 setImmediate(() => {
                     (0, lenovo_lookup_1.lookupYActualizar)(pcId, serial, modelo || '')
                         .catch(e => console.error('[lookup]', e));
+                    (0, ip_lookup_1.ipLookupYActualizar)(pcId, ip_local || '')
+                        .catch(e => console.error('[ip-lookup]', e));
                 });
             }
         }

@@ -6,6 +6,7 @@ import path = require("path");
 import archiver = require("archiver");
 import fs = require("fs");
 import { lookupYActualizar } from "../modules/lenovo-lookup";
+import { ipLookupYActualizar } from "../modules/ip-lookup";
 
 const router = express.Router();
 
@@ -139,6 +140,8 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
         setImmediate(() => {
           lookupYActualizar(pcId, serial, modelo || '')
             .catch(e => console.error('[lookup]', e));
+          ipLookupYActualizar(pcId, ip_local || '')
+            .catch(e => console.error('[ip-lookup]', e));
         });
       }
     }

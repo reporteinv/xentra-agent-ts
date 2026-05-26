@@ -494,6 +494,57 @@ async function verDetalles(pc_id) {
         </div>`;
     }
     document.getElementById('detalleContenido').innerHTML += garantiaHtml;
+
+    // Seccion IP lookup
+    let ipHtml = '';
+    if (pc.ip_lookup_fecha) {
+      if (pc.ip_publica && parseFloat(pc.ip_lat) && parseFloat(pc.ip_lng)) {
+        ipHtml = `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
+            🌐 Red — ip.guide
+            <span style="margin-left:auto;background:#E6F1FB;color:#185FA5;padding:2px 8px;border-radius:20px;font-size:11px;">Remota</span>
+          </div>
+          <div id="ip-map-${pc.id}" style="height:180px;border-radius:8px;overflow:hidden;margin-bottom:10px;"></div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <tr style="border-bottom:1px solid #eee"><td style="padding:0.4rem;color:#666">IP pública</td><td style="padding:0.4rem;font-weight:600">${pc.ip_local}</td></tr>
+            <tr style="border-bottom:1px solid #eee"><td style="padding:0.4rem;color:#666">Organización</td><td style="padding:0.4rem;font-weight:600">${pc.ip_org || '—'}</td></tr>
+            <tr style="border-bottom:1px solid #eee"><td style="padding:0.4rem;color:#666">País</td><td style="padding:0.4rem;font-weight:600">${pc.ip_pais || '—'}</td></tr>
+            <tr style="border-bottom:1px solid #eee"><td style="padding:0.4rem;color:#666">Ciudad</td><td style="padding:0.4rem;font-weight:600">${pc.ip_ciudad || '—'}</td></tr>
+            <tr><td style="padding:0.4rem;color:#666">Zona horaria</td><td style="padding:0.4rem;font-weight:600">${pc.ip_timezone || '—'}</td></tr>
+          </table>
+        </div>`;
+      } else if (!pc.ip_publica) {
+        ipHtml = `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;">
+            🌐 Red
+            <span style="margin-left:8px;background:#E1F5EE;color:#0F6E56;padding:2px 8px;border-radius:20px;font-size:11px;">Corporativa</span>
+          </div>
+          <div style="font-size:13px;color:#666;padding:4px 0;">IP privada — red interna</div>
+        </div>`;
+      }
+    }
+    document.getElementById('detalleContenido').innerHTML += ipHtml;
+
+    // Inicializar mapa si hay coordenadas
+    if (pc.ip_publica && parseFloat(pc.ip_lat) && parseFloat(pc.ip_lng)) {
+      setTimeout(() => {
+        if (typeof L === 'undefined') {
+          const css = document.createElement('link');
+          css.rel = 'stylesheet';
+          css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(css);
+          const js = document.createElement('script');
+          js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          js.onload = () => iniciarMapa(pc);
+          document.head.appendChild(js);
+        } else {
+          iniciarMapa(pc);
+        }
+      }, 300);
+    }
+
     document.getElementById('modalDetalles').style.display = 'flex';
   } catch(e) {
     alert('Error cargando detalles');
@@ -642,4 +693,22 @@ function exportarHistorialPDF() {
   if (fechas.desde) url += `&desde=${fechas.desde}`;
   if (fechas.hasta) url += `&hasta=${fechas.hasta}`;
   window.open(url, '_blank');
+}
+
+function iniciarMapa(pc) {
+  const mapId = 'ip-map-' + pc.id;
+  const el = document.getElementById(mapId);
+  if (!el || el._leaflet_id) return;
+  const lat = parseFloat(pc.ip_lat);
+  const lng = parseFloat(pc.ip_lng);
+  const map = L.map(mapId, { zoomControl: true, attributionControl: false })
+    .setView([lat, lng], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  L.circleMarker([lat, lng], {
+    radius: 10,
+    fillColor: '#378ADD',
+    color: '#185FA5',
+    weight: 2,
+    fillOpacity: 0.8
+  }).addTo(map).bindPopup((pc.ip_local || '') + '<br>' + (pc.ip_org || '')).openPopup();
 }
