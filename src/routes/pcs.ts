@@ -5,6 +5,7 @@ import { RowDataPacket } from "mysql2/promise";
 import path = require("path");
 import archiver = require("archiver");
 import fs = require("fs");
+import { lookupYActualizar } from "../modules/lenovo-lookup";
 
 const router = express.Router();
 
@@ -125,6 +126,23 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
       [serial],
     );
     const pcId = (rows as any[])[0]?.id;
+
+    // Lookup garantia Lenovo en background
+    if (pcId) {
+      const [pcData] = await pool.query<RowDataPacket[]>(
+        'SELECT lookup_status, lookup_fecha FROM pcs WHERE id=?', [pcId]);
+      const pc = (pcData as any[])[0];
+      const necesitaLookup = !pc?.lookup_fecha ||
+        pc?.lookup_status === 'pendiente' ||
+        pc?.lookup_status === 'error';
+      if (necesitaLookup) {
+        setImmediate(() => {
+          lookupYActualizar(pcId, serial, modelo || '')
+            .catch(e => console.error('[lookup]', e));
+        });
+      }
+    }
+
     if (pcId && mb_liberados_ultima != null) {
       await pool.query(
         "INSERT INTO historial_limpiezas (pc_id, mb_liberados, espacio_libre_gb) VALUES (?,?,?)",

@@ -456,6 +456,44 @@ async function verDetalles(pc_id) {
         <button id="btn-guardar-obs" onclick="guardarObservacion(${pc.id})" style="margin-top:6px;padding:6px 14px;background:#3498db;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">💾 Guardar</button>
       </div>
     `;
+    // Seccion garantia Lenovo
+    let garantiaHtml = '';
+    if (pc.modelo_oficial || pc.garantia_fin) {
+      const gStatus = pc.garantia_status || 'pendiente';
+      const colores = { vigente: '#22c55e', por_vencer: '#f59e0b', vencida: '#ef4444' };
+      const textos = { vigente: '🟢 Vigente', por_vencer: '🟡 Por vencer', vencida: '🔴 Vencida' };
+      const color = colores[gStatus] || '#9ca3af';
+      const texto = textos[gStatus] || '⚪ Sin datos';
+      garantiaHtml = `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
+            🛡️ Garantía Lenovo
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:0.5rem;color:#666;width:45%">Marca</td>
+              <td style="padding:0.5rem;font-weight:600">${pc.marca || '—'}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:0.5rem;color:#666;width:45%">Modelo oficial</td>
+              <td style="padding:0.5rem;font-weight:600">${pc.modelo_oficial || '—'}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:0.5rem;color:#666">Inicio garantía</td>
+              <td style="padding:0.5rem;font-weight:600">${pc.garantia_inicio ? pc.garantia_inicio.substring(0,10) : '—'}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:0.5rem;color:#666">Fin garantía</td>
+              <td style="padding:0.5rem;font-weight:600">${pc.garantia_fin ? pc.garantia_fin.substring(0,10) : '—'}</td>
+            </tr>
+            <tr>
+              <td style="padding:0.5rem;color:#666">Estado</td>
+              <td style="padding:0.5rem;font-weight:600;color:${color}">${texto}</td>
+            </tr>
+          </table>
+        </div>`;
+    }
+    document.getElementById('detalleContenido').innerHTML += garantiaHtml;
     document.getElementById('modalDetalles').style.display = 'flex';
   } catch(e) {
     alert('Error cargando detalles');

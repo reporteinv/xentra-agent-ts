@@ -2,22 +2,26 @@
 const express = require("express");
 const pool = require("../db");
 const router = express.Router();
-router.post('/api/limpiar-masivo', async (req, res) => {
+router.post("/api/limpiar-masivo", async (req, res) => {
     try {
         const [pcsActivos] = await pool.query("SELECT id FROM pcs WHERE activo=1 AND ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         if (!pcsActivos.length)
-            return res.status(400).json({ error: 'No hay PCs activos' });
+            return res.status(400).json({ error: "No hay PCs activos" });
         const [camp] = await pool.query("INSERT INTO campanas_limpieza (total_pcs) VALUES (?)", [pcsActivos.length]);
         const campanaId = camp.insertId;
         const valores = pcsActivos.map((p) => [campanaId, p.id]);
         await pool.query("INSERT INTO comandos_limpieza (campana_id, pc_id) VALUES ?", [valores]);
-        res.json({ ok: true, campana_id: campanaId, total: pcsActivos.length });
+        res.json({
+            ok: true,
+            campana_id: campanaId,
+            total: pcsActivos.length,
+        });
     }
     catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
-router.get('/api/limpieza/campanas', async (req, res) => {
+router.get("/api/limpieza/campanas", async (req, res) => {
     try {
         const [rows] = await pool.query(`
       SELECT c.*,
@@ -33,7 +37,7 @@ router.get('/api/limpieza/campanas', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
-router.get('/api/limpieza/detalle/:id', async (req, res) => {
+router.get("/api/limpieza/detalle/:id", async (req, res) => {
     try {
         await pool.query("UPDATE comandos_limpieza SET estado='expirado' WHERE estado='pendiente' AND fecha_expiracion <= NOW()");
         const [rows] = await pool.query(`
