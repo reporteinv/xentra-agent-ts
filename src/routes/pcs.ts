@@ -69,8 +69,10 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
       modelo,
       usuario,
       ip_local,
-      espacio_libre_gb,
-      espacio_total_gb,
+      espacio_libre_gb: espacio_libre_gb_raw,
+      espacio_total_gb: espacio_total_gb_raw,
+      disco_libre_gb,
+      disco_total_gb,
       mb_liberados_ultima,
       ultima_limpieza,
       ram_gb,
@@ -81,6 +83,8 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
       disco_desgaste,
       cpu_temp,
     } = req.body;
+    const espacio_libre_gb = espacio_libre_gb_raw || disco_libre_gb;
+    const espacio_total_gb = espacio_total_gb_raw || disco_total_gb;
     if (!serial || !nombre_equipo)
       return res
         .status(400)

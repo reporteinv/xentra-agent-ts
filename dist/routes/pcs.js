@@ -52,7 +52,9 @@ router.post("/api/reportar", async (req, res) => {
         const token = req.headers["x-agent-token"];
         if (token !== process.env.AGENT_TOKEN)
             return res.status(401).json({ error: "Token invalido" });
-        const { serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb, espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows, disco_salud, disco_temp, disco_desgaste, cpu_temp, } = req.body;
+        const { serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb: espacio_libre_gb_raw, espacio_total_gb: espacio_total_gb_raw, disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows, disco_salud, disco_temp, disco_desgaste, cpu_temp, } = req.body;
+        const espacio_libre_gb = espacio_libre_gb_raw || disco_libre_gb;
+        const espacio_total_gb = espacio_total_gb_raw || disco_total_gb;
         if (!serial || !nombre_equipo)
             return res
                 .status(400)

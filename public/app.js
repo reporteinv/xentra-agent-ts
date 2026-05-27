@@ -186,7 +186,7 @@ async function forzarLimpieza(pc_id, nombre, btn) {
     const res = await fetch('/api/comandos/crear', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pc_id })
+      body: JSON.stringify({ pc_id: parseInt(pc_id), comando: 'limpiar' })
     });
     const data = await res.json();
     if (data.ok) {
