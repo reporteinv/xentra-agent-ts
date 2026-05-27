@@ -52,7 +52,7 @@ router.post("/api/reportar", async (req, res) => {
         const token = req.headers["x-agent-token"];
         if (token !== process.env.AGENT_TOKEN)
             return res.status(401).json({ error: "Token invalido" });
-        const { serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb, espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows, } = req.body;
+        const { serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb, espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows, disco_salud, disco_temp, disco_desgaste, cpu_temp, } = req.body;
         if (!serial || !nombre_equipo)
             return res
                 .status(400)
@@ -69,8 +69,9 @@ router.post("/api/reportar", async (req, res) => {
         }
         await pool.query(`
       INSERT INTO pcs (serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb,
-        espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows,
+        disco_salud, disco_temp, disco_desgaste, cpu_temp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario) != '' THEN VALUES(usuario) ELSE usuario END,
@@ -79,7 +80,9 @@ router.post("/api/reportar", async (req, res) => {
         mb_liberados_ultima=COALESCE(VALUES(mb_liberados_ultima), mb_liberados_ultima),
         ultima_limpieza=COALESCE(VALUES(ultima_limpieza), ultima_limpieza),
         ram_gb=VALUES(ram_gb), procesador=VALUES(procesador),
-        version_windows=VALUES(version_windows), ultimo_reporte=NOW()
+        version_windows=VALUES(version_windows),
+        disco_salud=VALUES(disco_salud), disco_temp=VALUES(disco_temp),
+        disco_desgaste=VALUES(disco_desgaste), cpu_temp=VALUES(cpu_temp), ultimo_reporte=NOW()
     `, [
             serial,
             nombre_equipo,
@@ -93,6 +96,10 @@ router.post("/api/reportar", async (req, res) => {
             ram_gb || null,
             procesador || null,
             version_windows || null,
+            disco_salud || null,
+            disco_temp != null ? disco_temp : null,
+            disco_desgaste != null ? disco_desgaste : null,
+            cpu_temp != null ? cpu_temp : null,
         ]);
         const [rows] = await pool.query("SELECT id FROM pcs WHERE serial=?", [serial]);
         const pcId = rows[0]?.id;

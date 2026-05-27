@@ -1,0 +1,3 @@
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+[cron-ip] Iniciando ip lookup masivo...
+[cron-ip] Error general: Access denied for user ''@'localhost' (using password: NO)

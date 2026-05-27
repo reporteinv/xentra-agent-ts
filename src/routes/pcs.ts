@@ -76,6 +76,10 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
       ram_gb,
       procesador,
       version_windows,
+      disco_salud,
+      disco_temp,
+      disco_desgaste,
+      cpu_temp,
     } = req.body;
     if (!serial || !nombre_equipo)
       return res
@@ -95,8 +99,9 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
     await pool.query(
       `
       INSERT INTO pcs (serial, nombre_equipo, modelo, usuario, ip_local, espacio_libre_gb,
-        espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        espacio_total_gb, mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows,
+        disco_salud, disco_temp, disco_desgaste, cpu_temp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario) != '' THEN VALUES(usuario) ELSE usuario END,
@@ -105,7 +110,9 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
         mb_liberados_ultima=COALESCE(VALUES(mb_liberados_ultima), mb_liberados_ultima),
         ultima_limpieza=COALESCE(VALUES(ultima_limpieza), ultima_limpieza),
         ram_gb=VALUES(ram_gb), procesador=VALUES(procesador),
-        version_windows=VALUES(version_windows), ultimo_reporte=NOW()
+        version_windows=VALUES(version_windows),
+        disco_salud=VALUES(disco_salud), disco_temp=VALUES(disco_temp),
+        disco_desgaste=VALUES(disco_desgaste), cpu_temp=VALUES(cpu_temp), ultimo_reporte=NOW()
     `,
       [
         serial,
@@ -120,6 +127,10 @@ router.post("/api/reportar", async (req: Request, res: Response) => {
         ram_gb || null,
         procesador || null,
         version_windows || null,
+        disco_salud || null,
+        disco_temp != null ? disco_temp : null,
+        disco_desgaste != null ? disco_desgaste : null,
+        cpu_temp != null ? cpu_temp : null,
       ],
     );
     const [rows] = await pool.query<RowDataPacket[]>(

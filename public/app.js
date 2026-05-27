@@ -429,6 +429,10 @@ async function verDetalles(pc_id) {
     document.getElementById('detalleContenido').innerHTML = imgHtml + `
       <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666;width:45%">Serial</td><td style="padding:0.6rem;font-weight:600">${pc.serial || '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Temp. CPU</td><td style="padding:0.6rem;font-weight:600">${pc.cpu_temp ? pc.cpu_temp + ' °C' : '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Salud Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_salud ? (pc.disco_salud === 'Healthy' ? 'Saludable' : pc.disco_salud === 'Warning' ? 'Advertencia' : pc.disco_salud === 'Unhealthy' ? 'Crítico' : pc.disco_salud) : '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Temp. Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_temp ? pc.disco_temp + ' °C' : '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Desgaste Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_desgaste != null ? pc.disco_desgaste + '%' : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Modelo</td><td style="padding:0.6rem;font-weight:600">${pc.modelo || '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Procesador</td><td style="padding:0.6rem;font-weight:600">${pc.procesador || '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">RAM</td><td style="padding:0.6rem;font-weight:600">${pc.ram_gb ? pc.ram_gb + ' GB' : '-'}</td></tr>
