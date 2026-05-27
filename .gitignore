@@ -1,3 +1,4 @@
 node_modules/\ndist/\n.env
 node_modules/
 cron-lookup.log
+cron-ip-lookup.log

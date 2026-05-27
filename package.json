@@ -10,6 +10,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "adm-zip": "^0.5.17",
     "archiver": "^8.0.0",
     "axios": "^1.16.1",
     "dotenv": "^17.4.2",

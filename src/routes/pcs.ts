@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import pool = require("../db");
 import { RowDataPacket } from "mysql2/promise";
 import path = require("path");
-import archiver = require("archiver");
+const archiver = require("archiver").default || require("archiver");
 import fs = require("fs");
 import { lookupYActualizar } from "../modules/lenovo-lookup";
 import { ipLookupYActualizar } from "../modules/ip-lookup";
@@ -213,17 +213,24 @@ router.get("/descargar/xentra-agent.ps1", (req: Request, res: Response) => {
 });
 
 router.get("/api/descargar-agente", (req: Request, res: Response) => {
-  const ps1 = path.join(__dirname, "../../public/downloads/xentra-agent.ps1");
-  const bat = path.join(__dirname, "../../public/downloads/setup.bat");
-  if (!fs.existsSync(ps1) || !fs.existsSync(bat))
-    return res.status(500).json({ error: "Archivos no disponibles" });
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", 'attachment; filename="Instalador.zip"');
-  const archive = archiver("zip", { zlib: { level: 9 } });
-  archive.pipe(res);
-  archive.file(ps1, { name: "Instalador/xentra-agent.ps1" });
-  archive.file(bat, { name: "Instalador/setup.bat" });
-  archive.finalize();
+  try {
+    const ps1 = path.join(__dirname, "../../public/downloads/xentra-agent.ps1");
+    const bat = path.join(__dirname, "../../public/downloads/setup.bat");
+    if (!fs.existsSync(ps1) || !fs.existsSync(bat))
+      return res.status(500).json({ error: "Archivos no disponibles" });
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip();
+    zip.addLocalFile(ps1, 'Instalador');
+    zip.addLocalFile(bat, 'Instalador');
+    const zipBuffer = zip.toBuffer();
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="Instalador.zip"');
+    res.setHeader("Content-Length", zipBuffer.length);
+    res.send(zipBuffer);
+  } catch(e: any) {
+    console.error('[descargar-agente]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.get("/api/pcs/:id", async (req: Request, res: Response) => {
