@@ -16,7 +16,7 @@ if %errorlevel% neq 0 (
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.1
+echo                SETUP v3.3
 echo  ========================================
 echo.
 echo   1. Instalar
@@ -37,7 +37,7 @@ goto menu
 :instalar
 cls
 echo.
-echo  Instalando  v3.1...
+echo  Instalando  v3.3...
 echo.
 if not exist "C:\Xentra" mkdir "C:\Xentra"
 copy /Y "%~dp0xentra-pc-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul
@@ -64,6 +64,24 @@ if %MIN% LSS 10 set HORA_ST=0%HORA%:0%MIN%
 if %HORA% GEQ 10 if %MIN% LSS 10 set HORA_ST=%HORA%:0%MIN%
 schtasks /Create /TN "XentraAgentLimpieza" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Xentra\xentra-agent.ps1 -Limpiar" /SC DAILY /ST %HORA_ST% /RU SYSTEM /RL HIGHEST /F > nul 2>&1
 
+
+REM Instalar LHM si no existe
+if not exist "C:\Xentra\LHM\LibreHardwareMonitor.exe" (
+    echo  Descargando LHM...
+    powershell -Command "Invoke-WebRequest -Uri 'https://ag2.xentrasoft.com/downloads/lhm.zip' -OutFile 'C:\Xentra\lhm.zip' -TimeoutSec 60" > nul 2>&1
+    if exist "C:\Xentra\lhm.zip" (
+        powershell -Command "Expand-Archive -Path 'C:\Xentra\lhm.zip' -DestinationPath 'C:\Xentra\LHM\' -Force" > nul 2>&1
+        del /F /Q "C:\Xentra\lhm.zip" > nul 2>&1
+    )
+)
+REM Iniciar LHM si no esta corriendo
+tasklist /FI "IMAGENAME eq LibreHardwareMonitor.exe" 2>nul | find /I "LibreHardwareMonitor.exe" > nul
+if errorlevel 1 (
+    if exist "C:\Xentra\LHM\LibreHardwareMonitor.exe" (
+        start /B "" "C:\Xentra\LHM\LibreHardwareMonitor.exe" --no-ui > nul 2>&1
+        timeout /t 3 /nobreak > nul
+    )
+)
 REM Ejecucion inicial en background
 start /B powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Xentra\xentra-agent.ps1" -Limpiar
 start /B powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Xentra\xentra-agent.ps1"
@@ -81,7 +99,7 @@ goto menu
 :actualizar
 cls
 echo.
-echo  Actualizando  v3.1...
+echo  Actualizando  v3.3...
 echo.
 copy /Y "%~dp0xentra-pc-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul 2>&1
 powershell -Command "Unblock-File -Path 'C:\Xentra\xentra-agent.ps1'" > nul 2>&1
@@ -104,6 +122,24 @@ if %MIN% LSS 10 set HORA_ST=0%HORA%:0%MIN%
 if %HORA% GEQ 10 if %MIN% LSS 10 set HORA_ST=%HORA%:0%MIN%
 schtasks /Create /TN "XentraAgentLimpieza" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Xentra\xentra-agent.ps1 -Limpiar" /SC DAILY /ST %HORA_ST% /RU SYSTEM /RL HIGHEST /F > nul 2>&1
 
+
+REM Instalar LHM si no existe
+if not exist "C:\Xentra\LHM\LibreHardwareMonitor.exe" (
+    echo  Descargando LHM...
+    powershell -Command "Invoke-WebRequest -Uri 'https://ag2.xentrasoft.com/downloads/lhm.zip' -OutFile 'C:\Xentra\lhm.zip' -TimeoutSec 60" > nul 2>&1
+    if exist "C:\Xentra\lhm.zip" (
+        powershell -Command "Expand-Archive -Path 'C:\Xentra\lhm.zip' -DestinationPath 'C:\Xentra\LHM\' -Force" > nul 2>&1
+        del /F /Q "C:\Xentra\lhm.zip" > nul 2>&1
+    )
+)
+REM Iniciar LHM si no esta corriendo
+tasklist /FI "IMAGENAME eq LibreHardwareMonitor.exe" 2>nul | find /I "LibreHardwareMonitor.exe" > nul
+if errorlevel 1 (
+    if exist "C:\Xentra\LHM\LibreHardwareMonitor.exe" (
+        start /B "" "C:\Xentra\LHM\LibreHardwareMonitor.exe" --no-ui > nul 2>&1
+        timeout /t 3 /nobreak > nul
+    )
+)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Xentra\xentra-agent.ps1" > nul 2>&1
 
 cls

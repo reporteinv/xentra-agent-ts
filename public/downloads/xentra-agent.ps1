@@ -155,26 +155,61 @@ function Get-InfoDiscoC {
         if ($disco) {
             $smart = $null
             try { $smart = $disco | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue } catch {}
+            $temp = if ($smart) { $smart.Temperature } else { $null }
+            $desgaste = if ($smart) { $smart.Wear } else { $null }
+            # Fallback LHM para temperatura de disco
+            if (-not $temp) {
+                try {
+                    $sensors = Get-LHMData
+                    if ($sensors) {
+                        $dt = $sensors | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -like '*HDD*' -or $_.Name -like '*SSD*' -or $_.Name -like '*NVMe*' } |
+                              Select-Object -First 1
+                        if ($dt) { $temp = [math]::Round($dt.Value, 1) }
+                    }
+                } catch {}
+            }
             return @{
                 tipo     = $disco.MediaType
                 marca    = $disco.FriendlyName
                 bus      = $disco.BusType
                 salud    = $disco.HealthStatus
-                temp     = if ($smart) { $smart.Temperature } else { $null }
-                desgaste = if ($smart) { $smart.Wear } else { $null }
+                temp     = $temp
+                desgaste = $desgaste
             }
         }
     } catch {}
     return @{ tipo=$null; marca=$null; bus=$null; salud=$null; temp=$null; desgaste=$null }
 }
 
+function Get-LHMData {
+    # Inicia LHM si no esta corriendo y devuelve datos WMI
+    try {
+        $lhmExe = "C:\Xentra\LHM\LibreHardwareMonitor.exe"
+        $proc = Get-Process "LibreHardwareMonitor" -ErrorAction SilentlyContinue
+        if (-not $proc -and (Test-Path $lhmExe)) {
+            Start-Process $lhmExe -ArgumentList "--no-ui" -WindowStyle Hidden
+            Start-Sleep -Seconds 3
+        }
+        return Get-WmiObject -Namespace root/LibreHardwareMonitor -Class Sensor -ErrorAction SilentlyContinue
+    } catch { return $null }
+}
+
 function Get-CpuTemp {
     try {
+        # Intento 1: WMI nativo
         $temps = Get-WmiObject MSAcpi_ThermalZoneTemperature -Namespace root/wmi -ErrorAction SilentlyContinue |
                  ForEach-Object { [math]::Round($_.CurrentTemperature/10 - 273.15, 1) } |
                  Measure-Object -Maximum
-        return $temps.Maximum
-    } catch { return $null }
+        if ($temps.Maximum -and $temps.Maximum -gt 0) { return $temps.Maximum }
+        # Intento 2: LHM
+        $sensors = Get-LHMData
+        if ($sensors) {
+            $cpuTemp = $sensors | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -like '*CPU*' } |
+                       Measure-Object -Property Value -Maximum
+            if ($cpuTemp.Maximum) { return [math]::Round($cpuTemp.Maximum, 1) }
+        }
+    } catch {}
+    return $null
 }
 function Get-Antivirus {
     try {
