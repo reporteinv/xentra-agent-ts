@@ -96,6 +96,7 @@ function renderTabla(data) {
 <a href="#" onclick="forzarLimpieza(${pc.id},'${pc.nombre_equipo}',this);cerrarConfigs();return false;" class="cmenu-item">⚡ Forzar limpieza</a>
           <a href="#" onclick="verDetalles(${pc.id});cerrarConfigs();return false;" class="cmenu-item">🖥️ Detalles</a>
           <a href="#" onclick="verProgramas('${pc.serial}','${pc.nombre_equipo}');cerrarConfigs();return false;" class="cmenu-item">📋 Programas</a>
+          <a href="#" onclick="verRed('${pc.serial}','${pc.nombre_equipo}');cerrarConfigs();return false;" class="cmenu-item">📡 Red</a>
           <a href="#" onclick="eliminarPC('${pc.serial}','${pc.nombre_equipo}');cerrarConfigs();return false;" class="cmenu-item cmenu-danger">🗑️ Eliminar PC</a>
         </div>
       </div></td>
@@ -715,4 +716,42 @@ function iniciarMapa(pc) {
     weight: 2,
     fillOpacity: 0.8
   }).addTo(map).bindPopup((pc.ip_local || '') + '<br>' + (pc.ip_org || '')).openPopup();
+}
+
+// ============================================
+// EVENTOS DE RED
+// ============================================
+async function verRed(serial, nombre) {
+  const modal = document.getElementById('modalRed');
+  const titulo = document.getElementById('modalRedTitulo');
+  const tabla = document.getElementById('tablaEventosRed');
+  if (!modal) return;
+  titulo.textContent = 'Eventos de Red — ' + (nombre || serial);
+  tabla.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Cargando...</td></tr>';
+  modal.style.display = 'flex';
+  try {
+    const resp = await fetch('/api/eventos-red/' + serial, { credentials: 'include' });
+    const data = await resp.json();
+    if (!data.length) {
+      tabla.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Sin eventos registrados</td></tr>';
+      return;
+    }
+    tabla.innerHTML = data.map(e => {
+      const ts = new Date(e.timestamp).toLocaleString('es-CO');
+      const tipoColor = { cable_desconectado:'#e74c3c', conflicto_ip:'#f39c12', wifi_desconectado:'#e74c3c', wifi_conectado:'#27ae60', dhcp_fallo:'#e74c3c' };
+      const color = tipoColor[e.tipo] || '#aaa';
+      return '<tr>' +
+        '<td style="padding:6px 8px">' + ts + '</td>' +
+        '<td style="padding:6px 8px">' + (e.adaptador||'—') + '</td>' +
+        '<td style="padding:6px 8px;color:' + color + ';font-weight:600">' + (e.tipo||'—') + '</td>' +
+        '<td style="padding:6px 8px;color:#e74c3c">' + (e.ip_anterior||'—') + '</td>' +
+        '<td style="padding:6px 8px;color:#27ae60">' + (e.ip_nueva||'—') + '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    tabla.innerHTML = '<tr><td colspan="5" style="color:#c0392b;padding:16px">Error cargando eventos</td></tr>';
+  }
+}
+function cerrarRed() {
+  document.getElementById('modalRed').style.display = 'none';
 }

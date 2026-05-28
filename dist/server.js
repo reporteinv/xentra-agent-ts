@@ -54,6 +54,15 @@ function requireAuth(req, res, next) {
     next();
 }
 app.use(requireAuth);
+// No cachear JS y CSS para forzar actualizaciones
+app.use((req, res, next) => {
+    if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+    next();
+});
 app.use(express.static(path.join(__dirname, "../public")));
 // Rutas
 const authRouter = require("./routes/auth");
