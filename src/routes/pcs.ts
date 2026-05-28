@@ -302,4 +302,39 @@ router.post("/api/pcs/:serial/usb", async (req: Request, res: Response) => {
   }
 });
 
+
+// POST /api/evento-red
+router.post("/api/evento-red", async (req: Request, res: Response) => {
+  try {
+    const token = req.headers['x-agent-token'];
+    if (token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'Token invalido' });
+    const d = req.body;
+    if (!d.serial) return res.status(400).json({ error: 'serial requerido' });
+    const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=?', [d.serial]);
+    const pcId = (pcRows as any[])[0]?.id;
+    if (!pcId) return res.status(404).json({ error: 'PC no encontrado' });
+    await pool.query(
+      `INSERT INTO pcs_eventos_red (pc_id, adaptador, tipo, ip_anterior, ip_nueva, detalle)
+       VALUES (?,?,?,?,?,?)`,
+      [pcId, d.adaptador||null, d.tipo||'dhcp_fallo', d.ip_anterior||null, d.ip_nueva||null, d.detalle||null]
+    );
+    res.json({ ok: true });
+  } catch(e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/eventos-red/:serial
+router.get("/api/eventos-red/:serial", async (req: Request, res: Response) => {
+  try {
+    const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=?', [req.params.serial]);
+    const pcId = (pcRows as any[])[0]?.id;
+    if (!pcId) return res.status(404).json({ error: 'PC no encontrado' });
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT timestamp, adaptador, tipo, ip_anterior, ip_nueva, detalle
+       FROM pcs_eventos_red WHERE pc_id=? ORDER BY timestamp DESC LIMIT 50`,
+      [pcId]
+    );
+    res.json(rows);
+  } catch(e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export = router;

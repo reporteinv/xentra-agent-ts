@@ -22,6 +22,8 @@ const PASSWORD = "Ungrd.2026";
 function requireAuth(req, res, next) {
     if (req.path === "/api/reportar")
         return next();
+    if (req.path === "/api/evento-red")
+        return next();
     if (req.path.startsWith("/api/comandos/") && req.method === "GET")
         return next();
     if (req.path === "/api/comandos/resultado")
