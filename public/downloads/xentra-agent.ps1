@@ -1,5 +1,5 @@
 # ============================================
-# Xentra-PC-Agent v3.2
+# Xentra-PC-Agent v3.3
 # Xentrasoft - Agente universal por cliente
 # ============================================
 
@@ -30,7 +30,7 @@ $MarcaLimpieza    = 'C:\Xentra\ultima-limpieza.txt'
 $MarcaProgramas   = 'C:\Xentra\ultima-programas.txt'
 $ArchivoIntervalo = 'C:\Xentra\intervalo.txt'
 $MaxReintentos    = 5
-$Version          = '3.2'
+$Version          = '3.3'
 
 $IntervaloMin = 20
 if (Test-Path $ArchivoIntervalo) {
@@ -212,6 +212,52 @@ function Get-InfoBateria {
     } catch { return $null }
 }
 
+
+# ============================================================
+# GARANTIA POR FABRICANTE
+# ============================================================
+function Get-GarantiaHP {
+    try {
+        if (-not (Get-Module -ListAvailable -Name HP.ClientManagement -ErrorAction SilentlyContinue)) {
+            Write-Log "[HP] Instalando HPCMSL..."
+            $nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+            if (-not $nuget -or $nuget.Version -lt [Version]"2.8.5") {
+                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5 -Force -ErrorAction SilentlyContinue | Out-Null
+            }
+            $psget = Get-Module -ListAvailable -Name PowerShellGet | Sort-Object Version -Descending | Select-Object -First 1
+            if (-not $psget -or $psget.Version -lt [Version]"2.2.5") {
+                Install-Module -Name PowerShellGet -Force -AllowClobber -ErrorAction SilentlyContinue | Out-Null
+            }
+            Install-Module -Name HPCMSL -Force -AcceptLicense -ErrorAction SilentlyContinue | Out-Null
+        }
+        Import-Module HP.ClientManagement -ErrorAction SilentlyContinue
+        if (-not (Get-Command Get-HPWarrantyInfo -ErrorAction SilentlyContinue)) { return $null }
+        $w      = Get-HPWarrantyInfo
+        $inicio = if ($w.WarrantyStartDate) { ([datetime]$w.WarrantyStartDate).ToString('yyyy-MM-dd') } else { $null }
+        $fin    = if ($w.WarrantyEndDate)   { ([datetime]$w.WarrantyEndDate).ToString('yyyy-MM-dd')   } else { $null }
+        $estado = if ($w.Status) { $w.Status } else { $null }
+        Write-Log "[HP] Garantia: $estado | Fin: $fin"
+        return @{ garantia_status=$estado; garantia_inicio=$inicio; garantia_fin=$fin }
+    } catch { Write-Log "[HP] Error: $_"; return $null }
+}
+
+# LENOVO - pendiente
+# function Get-GarantiaLenovo { }
+
+# DELL - pendiente
+# function Get-GarantiaDell { }
+
+function Get-HPGarantia {
+    $fab = (Get-CimInstance Win32_ComputerSystem).Manufacturer
+    Write-Log "[GARANTIA] Fabricante: $fab"
+    if ($fab -like '*HP*' -or $fab -like '*Hewlett*') {
+        $r = Get-GarantiaHP
+        if ($r) { return $r }
+    }
+    Write-Log "[GARANTIA] Sin soporte para: $fab"
+    return @{ garantia_status=$null; garantia_inicio=$null; garantia_fin=$null }
+}
+
 function Recolectar-Datos {
     try {
         $serial  = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
@@ -220,6 +266,7 @@ function Recolectar-Datos {
         $infoRed = Get-InfoRed
         $infoD   = Get-InfoDiscoC
         $infoO   = Get-InfoOffice
+        $infoHP  = Get-HPGarantia
         $disco   = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $bb      = Get-CimInstance Win32_BaseBoard
         $bios    = Get-CimInstance Win32_BIOS
@@ -281,6 +328,9 @@ function Recolectar-Datos {
             impresora       = (Get-CimInstance Win32_Printer | Where-Object { $_.Default -eq $true } | Select-Object -First 1).Name
             uptime_horas    = [math]::Round(((Get-Date) - $boot).TotalHours, 1)
             version_agente  = $Version
+            garantia_status = $infoHP.garantia_status
+            garantia_inicio = $infoHP.garantia_inicio
+            garantia_fin    = $infoHP.garantia_fin
             bateria         = Get-InfoBateria
         }
     } catch { Write-Log "ERROR recolectando datos: $_"; return $null }
@@ -451,6 +501,86 @@ function Verificar-Tareas {
     }
 }
 
+
+# ============================================================
+# MONITOR RED / DHCP FIX
+# ============================================================
+function Monitor-Red {
+    try {
+        $adaptador = Get-NetAdapter -Physical | Where-Object {
+            $_.MediaType -eq '802.3' -and $_.Status -eq 'Up'
+        } | Select-Object -First 1
+        if (-not $adaptador) { return }
+        $ip = Get-NetIPAddress -InterfaceIndex $adaptador.InterfaceIndex `
+              -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+              Where-Object { $_.IPAddress -notlike '169.254.*' }
+        if (-not $ip) {
+            Write-Log "[RED] Sin IP valida en $($adaptador.Name) - Renovando DHCP..."
+            ipconfig /release "$($adaptador.Name)" | Out-Null
+            Start-Sleep -Seconds 3
+            ipconfig /renew "$($adaptador.Name)" | Out-Null
+            $ipNueva = (Get-NetIPAddress -InterfaceIndex $adaptador.InterfaceIndex `
+                -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                Where-Object { $_.IPAddress -notlike '169.254.*' }).IPAddress
+            $ipNueva = if ($ipNueva) { $ipNueva } else { 'sin-ip' }
+            Write-Log "[RED] Nueva IP: $ipNueva"
+            try {
+                $serial = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
+                Enviar-Json '/api/evento-red' @{
+                    serial      = $serial
+                    adaptador   = $adaptador.Name
+                    tipo        = 'dhcp_fallo'
+                    ip_anterior = '169.254.x.x'
+                    ip_nueva    = $ipNueva
+                    detalle     = 'DHCP renovado automaticamente por agente'
+                } 10
+                Write-Log "[RED] Evento enviado al servidor"
+            } catch { Write-Log "[RED] Error enviando evento: $_" }
+        }
+    } catch { Write-Log "[RED] Error monitor: $_" }
+}
+
+# ============================================================
+# EVENTOS VISOR DE WINDOWS
+# ============================================================
+function Enviar-EventosRed {
+    param([string]$serialPC, [datetime]$desde)
+    try {
+        # Ethernet: cable desconectado (ID 27) y conflicto IP (ID 4199)
+        $eventsSys = Get-WinEvent -LogName System -MaxEvents 100 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Id -in @(27, 4199) -and $_.TimeCreated -gt $desde }
+
+        # WiFi: desconexion (ID 8003) y conexion (ID 8001)
+        $eventsWlan = Get-WinEvent -LogName "Microsoft-Windows-WLAN-AutoConfig/Operational" -MaxEvents 50 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Id -in @(8001, 8003) -and $_.TimeCreated -gt $desde }
+
+        $todos = @($eventsSys) + @($eventsWlan) | Where-Object { $_ }
+        if (-not $todos -or $todos.Count -eq 0) { return }
+
+        foreach ($ev in $todos) {
+            $tipo = switch ($ev.Id) {
+                27    { 'cable_desconectado' }
+                4199  { 'conflicto_ip' }
+                8001  { 'wifi_conectado' }
+                8003  { 'wifi_desconectado' }
+                default { 'red_evento' }
+            }
+            $detalle = ($ev.Message -split "`n")[0].Trim()
+            if ($detalle.Length -gt 200) { $detalle = $detalle.Substring(0,200) }
+            try {
+                Enviar-Json '/api/evento-red' @{
+                    serial    = $serialPC
+                    adaptador = $null
+                    tipo      = $tipo
+                    detalle   = $detalle
+                    timestamp = $ev.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')
+                } 10
+            } catch {}
+        }
+        Write-Log "[RED] $($todos.Count) eventos de red enviados"
+    } catch { Write-Log "[RED] Error visor eventos: $_" }
+}
+
 # ============================================
 # MAIN
 # ============================================
@@ -474,6 +604,8 @@ if ($Poll) {
             Write-Log "[POLL] Sin comandos pendientes"
         }
     } catch { Write-Log "[POLL] Error: $_" }
+    Monitor-Red
+    Enviar-EventosRed $serialPoll ([datetime]::Now.AddMinutes(-2))
     Verificar-Tareas
     Write-Log "[POLL] Fin"
     exit 0
