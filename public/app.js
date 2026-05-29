@@ -71,21 +71,21 @@ function renderTabla(data) {
     <tr>
       <td><span class="badge ${pc.estado}">${pc.estado}</span></td>
       <td><span style="width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;background:${coloresPc[pc.id] ? _colMapPc[coloresPc[pc.id]] : 'transparent'}"></span><code style="cursor:pointer; color:#3498db;" onclick="verHistorial(${pc.id}, '${pc.serial}')">${pc.serial}</code></td>
-      <td>${pc.modelo || '-'}</td>
+      <td>${pc.modelo_oficial || pc.modelo || '-'}</td>
       <td>${pc.usuario ? pc.usuario.split('\\').pop() : '-'}</td>
       <td>${pc.ip_local || '-'}</td>
-      <td>${pc.espacio_libre_gb ? `
+      <td>${pc.disco_libre_gb ? `
       <div style="font-size:0.8rem;color:#555;margin-bottom:3px">
-      ${Math.round(pc.espacio_libre_gb)} GB libres de ${Math.round(pc.espacio_total_gb)} GB
+      ${Math.round(pc.disco_libre_gb)} GB libres de ${Math.round(pc.disco_total_gb)} GB
       </div>
       <div style="background:#eee;border-radius:4px;height:8px;width:100%">
-      <div style="background:${Math.round((pc.espacio_libre_gb/pc.espacio_total_gb)*100) < 20 ? '#e74c3c' : Math.round((pc.espacio_libre_gb/pc.espacio_total_gb)*100) < 40 ? '#f39c12' : '#27ae60'};
+      <div style="background:${Math.round((pc.disco_libre_gb/pc.disco_total_gb)*100) < 20 ? '#e74c3c' : Math.round((pc.disco_libre_gb/pc.disco_total_gb)*100) < 40 ? '#f39c12' : '#27ae60'};
                 height:8px;border-radius:4px;
-                width:${Math.round((pc.espacio_libre_gb/pc.espacio_total_gb)*100)}%">
+                width:${Math.round((pc.disco_libre_gb/pc.disco_total_gb)*100)}%">
       </div>
       </div>
       <div style="font-size:0.75rem;color:#888;margin-top:2px">
-       ${Math.round((pc.espacio_libre_gb/pc.espacio_total_gb)*100)}% libre
+       ${Math.round((pc.disco_libre_gb/pc.disco_total_gb)*100)}% libre
       </div>` : '-'}</td>
 	<td>${formatFecha(pc.ultima_limpieza)}</td>
       <td>${pc.mb_liberados_ultima != null ? (pc.mb_liberados_ultima / 1024).toFixed(1) + ' GB' : '-'}</td>
@@ -434,32 +434,16 @@ async function verDetalles(pc_id) {
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Salud Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_salud ? (pc.disco_salud === 'Healthy' ? 'Saludable' : pc.disco_salud === 'Warning' ? 'Advertencia' : pc.disco_salud === 'Unhealthy' ? 'Crítico' : pc.disco_salud) : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Temp. Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_temp ? pc.disco_temp + ' °C' : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Desgaste Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_desgaste != null ? pc.disco_desgaste + '%' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Modelo</td><td style="padding:0.6rem;font-weight:600">${pc.modelo || '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Procesador</td><td style="padding:0.6rem;font-weight:600">${pc.procesador || '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">RAM</td><td style="padding:0.6rem;font-weight:600">${pc.ram_gb ? pc.ram_gb + ' GB' : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Windows</td><td style="padding:0.6rem;font-weight:600">${pc.version_windows || '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Usuario</td><td style="padding:0.6rem;font-weight:600">${pc.usuario ? pc.usuario.split('\\').pop() : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">IP Local</td><td style="padding:0.6rem;font-weight:600">${pc.ip_local || '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco libre</td><td style="padding:0.6rem;font-weight:600">${pc.espacio_libre_gb ? pc.espacio_libre_gb + ' GB' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco total</td><td style="padding:0.6rem;font-weight:600">${pc.espacio_total_gb ? pc.espacio_total_gb + ' GB' : '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco libre</td><td style="padding:0.6rem;font-weight:600">${pc.disco_libre_gb ? pc.disco_libre_gb + ' GB' : '-'}</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco total</td><td style="padding:0.6rem;font-weight:600">${pc.disco_total_gb ? pc.disco_total_gb + ' GB' : '-'}</td></tr>
         <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Última limpieza</td><td style="padding:0.6rem;font-weight:600">${pc.ultima_limpieza ? new Date(pc.ultima_limpieza).toLocaleString('es-CO') : '-'}</td></tr>
         <tr><td style="padding:0.6rem;color:#666">MB liberados</td><td style="padding:0.6rem;font-weight:600">${pc.mb_liberados_ultima != null ? (pc.mb_liberados_ultima/1024).toFixed(2) + ' GB' : '-'}</td></tr>
       </table>
-      <div style="margin-top:12px;">
-        <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px;">Color</label>
-        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-          <span class="pc-dot" data-color="" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:transparent;border:1px solid #aaa;cursor:pointer;display:inline-block;${!coloresPc[pc.id] ? 'outline:2px solid #3498db;' : ''}"></span>
-          <span class="pc-dot" data-color="red" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#e74c3c;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='red' ? 'outline:2px solid #fff;' : ''}"></span>
-          <span class="pc-dot" data-color="yellow" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#f39c12;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='yellow' ? 'outline:2px solid #fff;' : ''}"></span>
-          <span class="pc-dot" data-color="green" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#27ae60;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='green' ? 'outline:2px solid #fff;' : ''}"></span>
-          <span class="pc-dot" data-color="blue" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#3498db;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='blue' ? 'outline:2px solid #fff;' : ''}"></span>
-          <input type="hidden" id="pc-color-sel" value="${coloresPc[pc.id] || ''}">
-          <button onclick="guardarColorPc(${pc.id})" style="padding:4px 10px;background:#555;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Aplicar</button>
-        </div>
-        <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px;">Observación</label>
-        <textarea id="detalle-obs" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:13px;resize:vertical;box-sizing:border-box;">${pc.observacion || ''}</textarea>
-        <button id="btn-guardar-obs" onclick="guardarObservacion(${pc.id})" style="margin-top:6px;padding:6px 14px;background:#3498db;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">💾 Guardar</button>
-      </div>
     `;
     // Seccion garantia Lenovo
     let garantiaHtml = '';
@@ -499,6 +483,25 @@ async function verDetalles(pc_id) {
         </div>`;
     }
     document.getElementById('detalleContenido').innerHTML += garantiaHtml;
+
+    // Color y Observacion al final
+    document.getElementById('detalleContenido').innerHTML += `
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+        <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px;">Color</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+          <span class="pc-dot" data-color="" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:transparent;border:1px solid #aaa;cursor:pointer;display:inline-block;${!coloresPc[pc.id] ? 'outline:2px solid #3498db;' : ''}"></span>
+          <span class="pc-dot" data-color="red" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#e74c3c;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='red' ? 'outline:2px solid #fff;' : ''}"></span>
+          <span class="pc-dot" data-color="yellow" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#f39c12;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='yellow' ? 'outline:2px solid #fff;' : ''}"></span>
+          <span class="pc-dot" data-color="green" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#27ae60;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='green' ? 'outline:2px solid #fff;' : ''}"></span>
+          <span class="pc-dot" data-color="blue" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:#3498db;cursor:pointer;display:inline-block;${coloresPc[pc.id]==='blue' ? 'outline:2px solid #fff;' : ''}"></span>
+          <input type="hidden" id="pc-color-sel" value="${coloresPc[pc.id] || ''}">
+          <button onclick="guardarColorPc(${pc.id})" style="padding:4px 10px;background:#555;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Aplicar</button>
+        </div>
+        <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px;">Observación</label>
+        <textarea id="detalle-obs" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:13px;resize:vertical;box-sizing:border-box;">${pc.observacion || ''}</textarea>
+        <button id="btn-guardar-obs" onclick="guardarObservacion(${pc.id})" style="margin-top:6px;padding:6px 14px;background:#3498db;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">💾 Guardar</button>
+      </div>
+    `;
 
     // Seccion IP lookup
     let ipHtml = '';

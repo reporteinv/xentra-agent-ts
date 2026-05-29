@@ -21,10 +21,11 @@ add-type @"
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$EmpresaId        = '1'
-$EndpointPrimario = 'https://ag2.xentrasoft.com'
+$EmpresaId        = '26'
+$EndpointPrimario = 'https://ts.xentrasoft.com'
 $EndpointRespaldo = 'https://app.xentrasoft.com'
-$AgentToken       = 'xnt_ungrd_2026'
+$EndpointAg2      = 'https://ag2.xentrasoft.com'
+$AgentToken       = 'xnt_473ab41349459abb698a1cc0eae6e212'
 $LogFile          = 'C:\Xentra\xentra-agent.log'
 $MarcaLimpieza    = 'C:\Xentra\ultima-limpieza.txt'
 $MarcaProgramas   = 'C:\Xentra\ultima-programas.txt'
@@ -215,7 +216,9 @@ function Get-InfoBateria {
 
 # ============================================================
 # GARANTIA POR FABRICANTE
+# Agregar nuevos fabricantes aqui segun se vayan integrando
 # ============================================================
+
 function Get-GarantiaHP {
     try {
         if (-not (Get-Module -ListAvailable -Name HP.ClientManagement -ErrorAction SilentlyContinue)) {
@@ -241,20 +244,33 @@ function Get-GarantiaHP {
     } catch { Write-Log "[HP] Error: $_"; return $null }
 }
 
-# LENOVO - pendiente
-# function Get-GarantiaLenovo { }
+# LENOVO - pendiente de implementar
+# function Get-GarantiaLenovo {
+#     TODO: usar Lenovo Warranty API
+#     https://pcsupport.lenovo.com/us/en/warrantylookup
+#     return @{ garantia_status=$null; garantia_inicio=$null; garantia_fin=$null }
+# }
 
-# DELL - pendiente
-# function Get-GarantiaDell { }
+# DELL - pendiente de implementar
+# function Get-GarantiaDell {
+#     TODO: usar Dell Warranty API (requiere API key en TechDirect)
+#     https://developer.dell.com/apis/5702/versions/1.0.0/docs/
+#     return @{ garantia_status=$null; garantia_inicio=$null; garantia_fin=$null }
+# }
 
 function Get-HPGarantia {
+    # Detectar fabricante primero — evita instalar modulos innecesarios
     $fab = (Get-CimInstance Win32_ComputerSystem).Manufacturer
-    Write-Log "[GARANTIA] Fabricante: $fab"
+    Write-Log "[GARANTIA] Fabricante detectado: $fab"
+
     if ($fab -like '*HP*' -or $fab -like '*Hewlett*') {
         $r = Get-GarantiaHP
         if ($r) { return $r }
     }
-    Write-Log "[GARANTIA] Sin soporte para: $fab"
+    # elseif ($fab -like '*Lenovo*') { return Get-GarantiaLenovo }
+    # elseif ($fab -like '*Dell*')   { return Get-GarantiaDell   }
+
+    Write-Log "[GARANTIA] Fabricante sin soporte de garantia: $fab"
     return @{ garantia_status=$null; garantia_inicio=$null; garantia_fin=$null }
 }
 
@@ -336,6 +352,23 @@ function Recolectar-Datos {
     } catch { Write-Log "ERROR recolectando datos: $_"; return $null }
 }
 
+
+function Enviar-Json-Ambos {
+    param($path, $objeto, $timeout)
+    $json  = $objeto | ConvertTo-Json -Depth 3
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+    # Enviar a ts (principal)
+    try {
+        Invoke-ConReintentos "$EndpointPrimario$path" 'Post' $bytes 'application/json' $timeout | Out-Null
+        Write-Log "Reporte OK → ts"
+    } catch { Write-Log "ERROR ts: $_" }
+    # Enviar a ag2 (paralelo)
+    try {
+        Invoke-ConReintentos "$EndpointAg2$path" 'Post' $bytes 'application/json' $timeout | Out-Null
+        Write-Log "Reporte OK → ag2"
+    } catch { Write-Log "ERROR ag2: $_" }
+}
+
 function Ejecutar-Limpieza {
     $disco      = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
     $libreAntes = [math]::Round($disco.FreeSpace / 1GB, 2)
@@ -360,7 +393,7 @@ function Enviar-Programas {
         $p32 = Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName } | Select-Object @{N='nombre';E={$_.DisplayName}},@{N='version';E={$_.DisplayVersion}},@{N='fabricante';E={$_.Publisher}},@{N='fecha_instalacion';E={$_.InstallDate}}
         $p64 = Get-ItemProperty 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName } | Select-Object @{N='nombre';E={$_.DisplayName}},@{N='version';E={$_.DisplayVersion}},@{N='fabricante';E={$_.Publisher}},@{N='fecha_instalacion';E={$_.InstallDate}}
         $todos = @($p32) + @($p64) | Sort-Object nombre -Unique
-        Enviar-Json '/api/programas' @{ serial=$serial; empresa_id=[int]$EmpresaId; programas=$todos } 30
+        Enviar-Json '/api/pc/programas' @{ serial=$serial; empresa_id=[int]$EmpresaId; programas=$todos } 30
         Set-Content -Path $MarcaProgramas -Value (Get-Date).ToString('o')
         Write-Log "Programas enviados: $($todos.Count)"
     } catch { Write-Log "Error enviando programas: $_" }
@@ -382,9 +415,9 @@ function Actualizar-Agente {
     try {
         Write-Log "Iniciando auto-actualizacion..."
         $serialActual = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
-        $nv = Invoke-ConFailover "/descargar/xentra-agent.ps1?serial=$serialActual" 'Get' $null $null 30
+        $nv = Invoke-ConFailover "/api/pc/agente/ps1?serial=$serialActual" 'Get' $null $null 30
         if ($nv -and $nv.Length -gt 100) {
-            $nv = $nv -replace '__EMPRESA_ID__', $EmpresaId
+            $nv = $nv -replace '26', $EmpresaId
             $tmp = 'C:\Xentra\xentra-agent-nuevo.ps1'
             Set-Content -Path $tmp -Value $nv -Encoding UTF8
             Copy-Item $tmp 'C:\Xentra\xentra-agent.ps1' -Force
@@ -435,12 +468,12 @@ function Procesar-Comando {
         }
         'reiniciar' {
             $res.output = "Reiniciando..."
-            try { Enviar-Json '/api/comandos/resultado' $res 15 } catch {}
+            try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch {}
             Start-Sleep -Seconds 3; Restart-Computer -Force; return
         }
         'apagar' {
             $res.output = "Apagando..."
-            try { Enviar-Json '/api/comandos/resultado' $res 15 } catch {}
+            try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch {}
             Start-Sleep -Seconds 3; Stop-Computer -Force; return
         }
         'bloquear' { rundll32.exe user32.dll,LockWorkStation; $res.output = "Pantalla bloqueada" }
@@ -455,7 +488,7 @@ function Procesar-Comando {
         }
         'actualizar_agente' {
             $res.output = Actualizar-Agente
-            try { Enviar-Json '/api/comandos/resultado' $res 15 } catch {}
+            try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch {}
             Write-Log "Resultado: $($res.output)"
             exit 0
         }
@@ -464,10 +497,10 @@ function Procesar-Comando {
             $res.output = Cambiar-Intervalo $min
         }
         'inventario_ahora'  { Enviar-Programas $datos.serial; $res.output = "Inventario enviado" }
-        'reporte_ahora'     { Enviar-Json '/api/reportar' $datos 20; $res.output = "Reporte enviado" }
+        'reporte_ahora'     { Enviar-Json '/api/pc/reportar' $datos 20; $res.output = "Reporte enviado" }
         default { $res.estado = 'error'; $res.output = "Comando desconocido: $($resp.comando)" }
     }
-    try { Enviar-Json '/api/comandos/resultado' $res 15 } catch { Write-Log "Error enviando resultado: $_" }
+    try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch { Write-Log "Error enviando resultado: $_" }
     Write-Log "Resultado: $($res.output)"
 }
 
@@ -502,18 +535,21 @@ function Verificar-Tareas {
 }
 
 
-# ============================================================
+# ============================================
 # MONITOR RED / DHCP FIX
-# ============================================================
+# ============================================
 function Monitor-Red {
     try {
+        # Solo ethernet fisico activo
         $adaptador = Get-NetAdapter -Physical | Where-Object {
             $_.MediaType -eq '802.3' -and $_.Status -eq 'Up'
         } | Select-Object -First 1
         if (-not $adaptador) { return }
+
         $ip = Get-NetIPAddress -InterfaceIndex $adaptador.InterfaceIndex `
               -AddressFamily IPv4 -ErrorAction SilentlyContinue |
               Where-Object { $_.IPAddress -notlike '169.254.*' }
+
         if (-not $ip) {
             Write-Log "[RED] Sin IP valida en $($adaptador.Name) - Renovando DHCP..."
             ipconfig /release "$($adaptador.Name)" | Out-Null
@@ -524,9 +560,10 @@ function Monitor-Red {
                 Where-Object { $_.IPAddress -notlike '169.254.*' }).IPAddress
             $ipNueva = if ($ipNueva) { $ipNueva } else { 'sin-ip' }
             Write-Log "[RED] Nueva IP: $ipNueva"
+            # Enviar evento al servidor
             try {
                 $serial = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
-                Enviar-Json '/api/evento-red' @{
+                Enviar-Json '/api/pc/evento-red' @{
                     serial      = $serial
                     adaptador   = $adaptador.Name
                     tipo        = 'dhcp_fallo'
@@ -538,47 +575,6 @@ function Monitor-Red {
             } catch { Write-Log "[RED] Error enviando evento: $_" }
         }
     } catch { Write-Log "[RED] Error monitor: $_" }
-}
-
-# ============================================================
-# EVENTOS VISOR DE WINDOWS
-# ============================================================
-function Enviar-EventosRed {
-    param([string]$serialPC, [datetime]$desde)
-    try {
-        # Ethernet: cable desconectado (ID 27) y conflicto IP (ID 4199)
-        $eventsSys = Get-WinEvent -LogName System -MaxEvents 100 -ErrorAction SilentlyContinue |
-            Where-Object { $_.Id -in @(27, 4199) -and $_.TimeCreated -gt $desde }
-
-        # WiFi: desconexion (ID 8003) y conexion (ID 8001)
-        $eventsWlan = Get-WinEvent -LogName "Microsoft-Windows-WLAN-AutoConfig/Operational" -MaxEvents 50 -ErrorAction SilentlyContinue |
-            Where-Object { $_.Id -in @(8001, 8003) -and $_.TimeCreated -gt $desde }
-
-        $todos = @($eventsSys) + @($eventsWlan) | Where-Object { $_ }
-        if (-not $todos -or $todos.Count -eq 0) { return }
-
-        foreach ($ev in $todos) {
-            $tipo = switch ($ev.Id) {
-                27    { 'cable_desconectado' }
-                4199  { 'conflicto_ip' }
-                8001  { 'wifi_conectado' }
-                8003  { 'wifi_desconectado' }
-                default { 'red_evento' }
-            }
-            $detalle = ($ev.Message -split "`n")[0].Trim()
-            if ($detalle.Length -gt 200) { $detalle = $detalle.Substring(0,200) }
-            try {
-                Enviar-Json '/api/evento-red' @{
-                    serial    = $serialPC
-                    adaptador = $null
-                    tipo      = $tipo
-                    detalle   = $detalle
-                    timestamp = $ev.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')
-                } 10
-            } catch {}
-        }
-        Write-Log "[RED] $($todos.Count) eventos de red enviados"
-    } catch { Write-Log "[RED] Error visor eventos: $_" }
 }
 
 # ============================================
@@ -595,7 +591,7 @@ if ($Poll) {
     try {
         $serialPoll = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
         Write-Log "[POLL] Serial: $serialPoll"
-        $resp = Invoke-ConFailover "/api/comandos/$serialPoll" 'Get' $null $null 15
+        $resp = Invoke-ConFailover "/api/pc/comandos/$serialPoll" 'Get' $null $null 15
         if ($resp.hay) {
             Write-Log "[POLL] Comando: $($resp.comando)"
             $dp = @{ serial=$serialPoll; empresa_id=[int]$EmpresaId; disco_libre_gb=0; disco_total_gb=0 }
@@ -605,7 +601,6 @@ if ($Poll) {
         }
     } catch { Write-Log "[POLL] Error: $_" }
     Monitor-Red
-    Enviar-EventosRed $serialPoll ([datetime]::Now.AddMinutes(-2))
     Verificar-Tareas
     Write-Log "[POLL] Fin"
     exit 0
@@ -627,7 +622,8 @@ if ($Limpiar) {
     $datos.ultima_limpieza     = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     $datos.disco_libre_gb      = $r.libre
     $datos.disco_total_gb      = $r.total
-    try { Enviar-Json '/api/reportar' $datos 30; Write-Log "Reporte limpieza OK" } catch { Write-Log "ERROR: $_" }
+    Enviar-Json-Ambos '/api/pc/reportar' $datos 30
+    Write-Log "Reporte limpieza OK"
     Enviar-Programas $datos.serial
     Write-Log "=== Fin LIMPIEZA ==="
     exit 0
@@ -637,11 +633,11 @@ if ($Limpiar) {
 $datos = Recolectar-Datos
 if (-not $datos) { Write-Log "Error recolectando datos"; exit 1 }
 try {
-    $resp = Invoke-ConFailover "/api/comandos/$($datos.serial)" 'Get' $null $null 15
+    $resp = Invoke-ConFailover "/api/pc/comandos/$($datos.serial)" 'Get' $null $null 15
     if ($resp.hay) { Procesar-Comando $resp $datos; exit 0 }
 } catch { Write-Log "Error polling: $_" }
 try {
-    Enviar-Json '/api/reportar' $datos 20
+    Enviar-Json-Ambos '/api/pc/reportar' $datos 20
     Write-Log "Reporte rapido OK (IP: $($datos.ip_local) | Disco: $($datos.disco_libre_gb) GB | v$Version)"
 } catch { Write-Log "ERROR reporte rapido: $_" }
 $ep = $false

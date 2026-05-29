@@ -40,7 +40,7 @@ echo.
 echo  Instalando  v3.3...
 echo.
 if not exist "C:\Xentra" mkdir "C:\Xentra"
-copy /Y "%~dp0xentra-pc-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul
+copy /Y "%~dp0xentra-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul
 powershell -Command "Unblock-File -Path 'C:\Xentra\xentra-agent.ps1'" > nul 2>&1
 attrib +h "C:\Xentra" > nul 2>&1
 del /F /Q "C:\Xentra\ultima-limpieza.txt" 2>nul
@@ -83,7 +83,7 @@ cls
 echo.
 echo  Actualizando  v3.3...
 echo.
-copy /Y "%~dp0xentra-pc-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul 2>&1
+copy /Y "%~dp0xentra-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul 2>&1
 powershell -Command "Unblock-File -Path 'C:\Xentra\xentra-agent.ps1'" > nul 2>&1
 attrib +h "C:\Xentra" > nul 2>&1
 
@@ -121,7 +121,7 @@ echo.
 echo  Desinstalando ...
 echo.
 for /f %%a in ('powershell -Command "(Get-CimInstance Win32_BIOS).SerialNumber.Trim()"') do set SERIAL=%%a
-powershell -Command "try { Invoke-RestMethod -Uri 'https://ag2.xentrasoft.com/api/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_ungrd_2026'} -TimeoutSec 10 } catch { try { Invoke-RestMethod -Uri 'https://app.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_ungrd_2026'} -TimeoutSec 10 } catch {} }" > nul 2>&1
+powershell -Command "try { Invoke-RestMethod -Uri 'https://ts.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_473ab41349459abb698a1cc0eae6e212'} -TimeoutSec 10 } catch { try { Invoke-RestMethod -Uri 'https://app.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_473ab41349459abb698a1cc0eae6e212'} -TimeoutSec 10 } catch {} }" > nul 2>&1
 schtasks /Delete /TN "XentraAgent" /F 2>nul
 schtasks /Delete /TN "XentraAgentPoll" /F 2>nul
 schtasks /Delete /TN "XentraAgentLimpieza" /F 2>nul
