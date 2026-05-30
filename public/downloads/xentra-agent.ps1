@@ -399,17 +399,7 @@ function Enviar-Programas {
     } catch { Write-Log "Error enviando programas: $_" }
 }
 
-function Ejecutar-Script {
-    param($scriptB64)
-    $tmp = "C:\Xentra\cmd_$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
-    try {
-        $sc = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($scriptB64))
-        Set-Content -Path $tmp -Value $sc -Encoding UTF8
-        $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp 2>&1
-        return ($out | Out-String).Trim()
-    } catch { return "Error: $_" }
-    finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
-}
+
 
 function Actualizar-Agente {
     try {
@@ -482,9 +472,12 @@ function Procesar-Comando {
             $tit = if ($resp.params.titulo) { $resp.params.titulo } else { 'Xentrasoft' }
             $res.output = Mostrar-Mensaje $txt $tit
         }
-        'ejecutar_script' {
-            $script = if ($resp.params -is [string]) { ($resp.params | ConvertFrom-Json).script } else { $resp.params.script }
-            $res.output = if ($script) { Ejecutar-Script $script } else { "Error: script no proporcionado" }
+        'cerrar_sesion' {
+            $res.output = "Cerrando sesion..."
+            try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch {}
+            Start-Sleep -Seconds 2
+            logoff
+            return
         }
         'actualizar_agente' {
             $res.output = Actualizar-Agente
@@ -609,6 +602,12 @@ if ($Poll) {
 # MODO LIMPIEZA
 if ($Limpiar) {
     Write-Log "=== Inicio LIMPIEZA ==="
+    # Validar uptime: no ejecutar si el sistema lleva menos de 30 min encendido
+    $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    if ($uptime.TotalMinutes -lt 30) {
+        Write-Log "Limpieza omitida: sistema recien encendido ($([int]$uptime.TotalMinutes) min uptime)"
+        exit 0
+    }
     $hoy = $false
     if (Test-Path $MarcaLimpieza) {
         if (((Get-Date) - [datetime](Get-Content $MarcaLimpieza)).Days -ge 3) { $hoy = $true }
