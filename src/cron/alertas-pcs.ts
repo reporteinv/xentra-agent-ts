@@ -1,4 +1,5 @@
 import * as nodemailer from 'nodemailer';
+import { logInfo, logError } from '../modules/logger';
 import * as https from 'https';
 import pool = require('../db');
 import { RowDataPacket } from 'mysql2/promise';
@@ -49,9 +50,9 @@ async function verificarPcsSinReporte(): Promise<void> {
 
     await enviarWhatsApp(`Xentrasoft: ${(pcs as any[]).length} PC(s) sin reporte hace >1h. Revisa el dashboard.`);
 
-    console.log(`[Alertas] ${(pcs as any[]).length} PCs sin reporte — alerta enviada`);
+    logInfo('ALERTA_PCS', { mensaje: `${(pcs as any[]).length} PCs sin reporte — alerta enviada` });
   } catch (e: any) {
-    console.error('[Alertas] Error:', e.message);
+    logError('ALERTA_PCS_ERROR', e.message);
   }
 }
 

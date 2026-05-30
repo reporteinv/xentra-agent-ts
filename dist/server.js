@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
+const logger_1 = require("./modules/logger");
 const helmet = require("helmet");
 const session = require("express-session");
 const path = require("path");
@@ -107,7 +108,7 @@ app.use(limpiezaRouter);
 app.use(comandosRouter);
 app.use(agenteRouter);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
-app.listen(PORT, () => console.log(`xentra-agent-ts corriendo en http://localhost:${PORT}`));
+app.listen(PORT, () => (0, logger_1.logInfo)("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }));
 const alertas_pcs_1 = require("./cron/alertas-pcs");
 // Cron: verificar PCs sin reporte cada 60 minutos
 setInterval(async () => {

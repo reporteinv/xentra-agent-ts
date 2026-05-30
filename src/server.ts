@@ -1,4 +1,5 @@
 import express = require("express");
+import { logInfo, logError } from './modules/logger';
 import helmet = require("helmet");
 import session = require("express-session");
 import path = require("path");
@@ -111,7 +112,7 @@ app.get("/health", (req, res) =>
 );
 
 app.listen(PORT, () =>
-  console.log(`xentra-agent-ts corriendo en http://localhost:${PORT}`),
+  logInfo("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }),
 );
 
 import { verificarPcsSinReporte } from './cron/alertas-pcs';

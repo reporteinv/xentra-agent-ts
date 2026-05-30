@@ -1,4 +1,5 @@
 import express = require("express");
+import { logInfo, logError, logWarn } from '../modules/logger';
 import { Request, Response } from "express";
 import pool = require("../db");
 import { RowDataPacket } from "mysql2/promise";
@@ -130,9 +131,9 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
       if (necesitaLookup) {
         setImmediate(() => {
           lookupYActualizar(pcId, d.serial, d.modelo || '')
-            .catch(e => console.error('[lookup]', e));
+            .catch(e => logError('LOOKUP_ERROR', e.message));
           ipLookupYActualizar(pcId, d.ip_local || '')
-            .catch(e => console.error('[ip-lookup]', e));
+            .catch(e => logError('IP_LOOKUP_ERROR', e.message));
         });
       }
     }
@@ -142,7 +143,7 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
     }
     res.json({ ok: true, mensaje: 'Reporte recibido' });
   } catch (err: any) {
-    console.error("[Agent] Error:", err);
+    logError("AGENT_ERROR", err.message);
     res.status(500).json({ error: "Error interno" });
   }
 });
@@ -193,7 +194,7 @@ router.get("/api/descargar-agente", (req: Request, res: Response) => {
     res.setHeader("Content-Length", zipBuffer.length);
     res.send(zipBuffer);
   } catch(e: any) {
-    console.error('[descargar-agente]', e.message);
+    logError('DESCARGAR_AGENTE', e.message);
     res.status(500).json({ error: e.message });
   }
 });

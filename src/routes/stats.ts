@@ -1,4 +1,5 @@
 import express = require("express");
+import { logInfo, logError, logWarn } from '../modules/logger';
 import { Request, Response } from "express";
 import pool = require("../db");
 import { RowDataPacket } from "mysql2/promise";
@@ -55,7 +56,7 @@ router.get("/api/stats", async (req: Request, res: Response) => {
       por_dia: porDia,
     });
   } catch (e: any) {
-    console.error("[Stats]", e);
+    logError("STATS_ERROR", e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -156,7 +157,7 @@ router.post("/api/programas", async (req: Request, res: Response) => {
     }
     res.json({ ok: true, total: programas.length });
   } catch (e: any) {
-    console.error("[Programas]", e);
+    logError("PROGRAMAS_ERROR", e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -201,7 +202,7 @@ router.get("/api/metrics", async (req: Request, res: Response) => {
       timestamp:      new Date().toISOString()
     });
   } catch (e: any) {
-    console.error("[Metrics]", e);
+    logError("METRICS_ERROR", e.message);
     res.status(500).json({ error: e.message });
   }
 });

@@ -1,5 +1,6 @@
 "use strict";
 const express = require("express");
+const logger_1 = require("../modules/logger");
 const pool = require("../db");
 const router = express.Router();
 router.get("/api/pcs/:id/historial", async (req, res) => {
@@ -48,7 +49,7 @@ router.get("/api/stats", async (req, res) => {
         });
     }
     catch (e) {
-        console.error("[Stats]", e);
+        (0, logger_1.logError)("STATS_ERROR", e.message);
         res.status(500).json({ error: e.message });
     }
 });
@@ -140,7 +141,7 @@ router.post("/api/programas", async (req, res) => {
         res.json({ ok: true, total: programas.length });
     }
     catch (e) {
-        console.error("[Programas]", e);
+        (0, logger_1.logError)("PROGRAMAS_ERROR", e.message);
         res.status(500).json({ error: e.message });
     }
 });
@@ -175,7 +176,7 @@ router.get("/api/metrics", async (req, res) => {
         });
     }
     catch (e) {
-        console.error("[Metrics]", e);
+        (0, logger_1.logError)("METRICS_ERROR", e.message);
         res.status(500).json({ error: e.message });
     }
 });

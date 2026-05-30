@@ -1,5 +1,6 @@
 "use strict";
 const express = require("express");
+const logger_1 = require("../modules/logger");
 const pool = require("../db");
 const path = require("path");
 const archiver = require("archiver").default || require("archiver");
@@ -120,9 +121,9 @@ router.post("/api/pc/reportar", async (req, res) => {
             if (necesitaLookup) {
                 setImmediate(() => {
                     (0, lenovo_lookup_1.lookupYActualizar)(pcId, d.serial, d.modelo || '')
-                        .catch(e => console.error('[lookup]', e));
+                        .catch(e => (0, logger_1.logError)('LOOKUP_ERROR', e.message));
                     (0, ip_lookup_1.ipLookupYActualizar)(pcId, d.ip_local || '')
-                        .catch(e => console.error('[ip-lookup]', e));
+                        .catch(e => (0, logger_1.logError)('IP_LOOKUP_ERROR', e.message));
                 });
             }
         }
@@ -132,7 +133,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         res.json({ ok: true, mensaje: 'Reporte recibido' });
     }
     catch (err) {
-        console.error("[Agent] Error:", err);
+        (0, logger_1.logError)("AGENT_ERROR", err.message);
         res.status(500).json({ error: "Error interno" });
     }
 });
@@ -180,7 +181,7 @@ router.get("/api/descargar-agente", (req, res) => {
         res.send(zipBuffer);
     }
     catch (e) {
-        console.error('[descargar-agente]', e.message);
+        (0, logger_1.logError)('DESCARGAR_AGENTE', e.message);
         res.status(500).json({ error: e.message });
     }
 });

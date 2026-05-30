@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verificarPcsSinReporte = verificarPcsSinReporte;
 const nodemailer = __importStar(require("nodemailer"));
+const logger_1 = require("../modules/logger");
 const https = __importStar(require("https"));
 const pool = require("../db");
 const transporter = nodemailer.createTransport({
@@ -75,9 +76,9 @@ async function verificarPcsSinReporte() {
             text: texto
         });
         await enviarWhatsApp(`Xentrasoft: ${pcs.length} PC(s) sin reporte hace >1h. Revisa el dashboard.`);
-        console.log(`[Alertas] ${pcs.length} PCs sin reporte — alerta enviada`);
+        (0, logger_1.logInfo)('ALERTA_PCS', { mensaje: `${pcs.length} PCs sin reporte — alerta enviada` });
     }
     catch (e) {
-        console.error('[Alertas] Error:', e.message);
+        (0, logger_1.logError)('ALERTA_PCS_ERROR', e.message);
     }
 }
