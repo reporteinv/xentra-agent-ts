@@ -161,4 +161,49 @@ router.post("/api/programas", async (req: Request, res: Response) => {
   }
 });
 
+
+router.get("/api/metrics", async (req: Request, res: Response) => {
+  try {
+    // PCs online: ultimo_reporte en los ultimos 15 min
+    const [[onlineRow]] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM pcs WHERE activo=1 AND ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)`
+    ) as any;
+
+    // Alertas 24h: comandos con estado error en ultimas 24h
+    const [[alertsRow]] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM pcs_comandos WHERE estado='error' AND creado >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+    ) as any;
+
+    // Ultimo backup: ultima limpieza registrada
+    const [[backupRow]] = await pool.query<RowDataPacket[]>(
+      `SELECT MAX(fecha) AS ultima FROM pcs_historial_limpiezas`
+    ) as any;
+
+    // Tunnel health: fetch a impresoras-ts
+    let tunnelOk = false;
+    try {
+      const http = require('http');
+      await new Promise<void>((resolve, reject) => {
+        const req2 = http.get('http://localhost:3000/health', (r: any) => {
+          tunnelOk = r.statusCode === 200;
+          resolve();
+        });
+        req2.setTimeout(3000, () => { req2.destroy(); reject(); });
+        req2.on('error', reject);
+      });
+    } catch {}
+
+    res.json({
+      pcs_online:     onlineRow.total,
+      alerts_24h:     alertsRow.total,
+      backup_status:  backupRow.ultima || null,
+      tunnel_health:  tunnelOk,
+      timestamp:      new Date().toISOString()
+    });
+  } catch (e: any) {
+    console.error("[Metrics]", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export = router;

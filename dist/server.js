@@ -7,6 +7,16 @@ const path = require("path");
 const dotenv = require("dotenv");
 dotenv.config();
 const app = express();
+app.set("trust proxy", 1);
+const { rateLimit } = require("express-rate-limit");
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas peticiones, intenta más tarde' }
+});
+app.use(limiter);
 const PORT = process.env.PORT || 3001;
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "100kb" }));
@@ -63,7 +73,14 @@ function requireAuth(req, res, next) {
     }
     next();
 }
-app.use(requireAuth);
+// Rutas públicas (sin autenticación)
+app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+app.get('/api/metrics', (req, res, next) => next());
+app.use((req, res, next) => {
+    if (req.path === '/api/metrics')
+        return next();
+    requireAuth(req, res, next);
+});
 // No cachear JS y CSS para forzar actualizaciones
 app.use((req, res, next) => {
     if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
