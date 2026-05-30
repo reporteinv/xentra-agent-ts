@@ -149,7 +149,7 @@ router.get("/api/pcs", async (req, res) => {
           WHEN (disco_libre_gb / disco_total_gb) < 0.20 THEN 'alerta'
           ELSE 'activo'
         END AS estado
-      FROM pcs WHERE activo=1 ORDER BY ultimo_reporte DESC
+      FROM pcs WHERE activo=1 AND deleted_at IS NULL ORDER BY ultimo_reporte DESC
     `);
         res.json(rows);
     }
@@ -198,7 +198,7 @@ router.get("/api/pcs/:id", async (req, res) => {
 });
 router.delete("/api/pcs/:serial", async (req, res) => {
     try {
-        await pool.query("UPDATE pcs SET activo=0 WHERE serial=?", [
+        await pool.query("UPDATE pcs SET activo=0, deleted_at=NOW() WHERE serial=?", [
             req.params.serial,
         ]);
         res.json({ ok: true });
