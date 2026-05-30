@@ -113,3 +113,15 @@ app.get("/health", (req, res) =>
 app.listen(PORT, () =>
   console.log(`xentra-agent-ts corriendo en http://localhost:${PORT}`),
 );
+
+import { verificarPcsSinReporte } from './cron/alertas-pcs';
+
+// Cron: verificar PCs sin reporte cada 60 minutos
+setInterval(async () => {
+  await verificarPcsSinReporte();
+}, 60 * 60 * 1000);
+
+// Ejecutar 30s despues de arrancar
+setTimeout(async () => {
+  await verificarPcsSinReporte();
+}, 30 * 1000);

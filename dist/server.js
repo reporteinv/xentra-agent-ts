@@ -108,3 +108,12 @@ app.use(comandosRouter);
 app.use(agenteRouter);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.listen(PORT, () => console.log(`xentra-agent-ts corriendo en http://localhost:${PORT}`));
+const alertas_pcs_1 = require("./cron/alertas-pcs");
+// Cron: verificar PCs sin reporte cada 60 minutos
+setInterval(async () => {
+    await (0, alertas_pcs_1.verificarPcsSinReporte)();
+}, 60 * 60 * 1000);
+// Ejecutar 30s despues de arrancar
+setTimeout(async () => {
+    await (0, alertas_pcs_1.verificarPcsSinReporte)();
+}, 30 * 1000);
