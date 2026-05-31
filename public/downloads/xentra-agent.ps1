@@ -24,14 +24,15 @@ add-type @"
 $EmpresaId        = '26'
 $EndpointPrimario = 'https://ts.xentrasoft.com'
 $EndpointRespaldo = 'https://app.xentrasoft.com'
-$EndpointAg2      = 'https://ag2.xentrasoft.com'
 $AgentToken       = 'xnt_473ab41349459abb698a1cc0eae6e212'
 $LogFile          = 'C:\Xentra\xentra-agent.log'
 $MarcaLimpieza    = 'C:\Xentra\ultima-limpieza.txt'
 $MarcaProgramas   = 'C:\Xentra\ultima-programas.txt'
 $ArchivoIntervalo = 'C:\Xentra\intervalo.txt'
+$ArchivoHash      = 'C:\Xentra\ultimo-hash.txt'
+$BufferCSV        = 'C:\Xentra\buffer-offline.csv'
 $MaxReintentos    = 5
-$Version          = '3.3'
+$Version          = '3.8'
 
 $IntervaloMin = 20
 if (Test-Path $ArchivoIntervalo) {
@@ -169,6 +170,66 @@ function Get-InfoDiscoC {
     return @{ tipo=$null; marca=$null; bus=$null; salud=$null; temp=$null; desgaste=$null }
 }
 
+function Get-InfoDiscos {
+    try {
+        $logicos = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 }
+        $resultado = @()
+        foreach ($d in $logicos) {
+            $letra = $d.DeviceID.Replace(':','')
+            $marca = $null
+            $tipo  = $null
+            $bus   = $null
+            try {
+                $diskNum = (Get-Partition -DriveLetter $letra -ErrorAction SilentlyContinue).DiskNumber
+                if ($diskNum -ne $null) {
+                    $pd = Get-PhysicalDisk | Where-Object { $_.DeviceID -eq $diskNum } | Select-Object -First 1
+                    if ($pd) {
+                        $marca = $pd.FriendlyName
+                        $tipo  = $pd.MediaType
+                        $bus   = $pd.BusType
+                    }
+                }
+            } catch {}
+            $temp     = $null
+            $horas    = $null
+            try {
+                if ($diskNum -ne $null) {
+                    $rel = Get-PhysicalDisk | Where-Object { $_.DeviceID -eq $diskNum } | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
+                    if ($rel.Temperature -and $rel.Temperature -gt 0) { $temp = $rel.Temperature }
+                    if ($rel.PowerOnHours -and $rel.PowerOnHours -gt 0) { $horas = $rel.PowerOnHours }
+                }
+            } catch {}
+            $resultado += @{
+                letra    = $d.DeviceID
+                total_gb = [math]::Round($d.Size / 1GB, 2)
+                libre_gb = [math]::Round($d.FreeSpace / 1GB, 2)
+                marca    = $marca
+                tipo     = $tipo
+                bus      = $bus
+                temp     = $temp
+                horas    = $horas
+            }
+        }
+        return $resultado
+    } catch { return @() }
+}
+
+function Get-InfoMonitores {
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        $pantallas = [System.Windows.Forms.Screen]::AllScreens
+        $resultado = @()
+        foreach ($p in $pantallas) {
+            $resultado += @{
+                nombre     = $p.DeviceName
+                resolucion = "$($p.Bounds.Width)x$($p.Bounds.Height)"
+                primario   = $p.Primary
+            }
+        }
+        return $resultado
+    } catch { return @() }
+}
+
 function Get-CpuTemp {
     try {
         $temps = Get-WmiObject MSAcpi_ThermalZoneTemperature -Namespace root/wmi -ErrorAction SilentlyContinue |
@@ -259,7 +320,7 @@ function Get-GarantiaHP {
 # }
 
 function Get-HPGarantia {
-    # Detectar fabricante primero — evita instalar modulos innecesarios
+    # Detectar fabricante primero - evita instalar modulos innecesarios
     $fab = (Get-CimInstance Win32_ComputerSystem).Manufacturer
     Write-Log "[GARANTIA] Fabricante detectado: $fab"
 
@@ -272,6 +333,25 @@ function Get-HPGarantia {
 
     Write-Log "[GARANTIA] Fabricante sin soporte de garantia: $fab"
     return @{ garantia_status=$null; garantia_inicio=$null; garantia_fin=$null }
+}
+
+function Get-InfoRam {
+    try {
+        $modulos = Get-CimInstance Win32_PhysicalMemory
+        $resultado = @()
+        $ffMap = @{8='DIMM';12='SO-DIMM';13='SO-DIMM';17='DIMM';24='DDR3';26='DDR4'}
+        foreach ($m in $modulos) {
+            $ff = if ($ffMap.ContainsKey([int]$m.FormFactor)) { $ffMap[[int]$m.FormFactor] } else { $null }
+            $resultado += @{
+                slot     = $m.BankLabel
+                marca    = $m.Manufacturer
+                gb       = [math]::Round($m.Capacity / 1GB, 0)
+                mhz      = $m.Speed
+                tipo     = $ff
+            }
+        }
+        return $resultado
+    } catch { return @() }
 }
 
 function Recolectar-Datos {
@@ -348,25 +428,11 @@ function Recolectar-Datos {
             garantia_inicio = $infoHP.garantia_inicio
             garantia_fin    = $infoHP.garantia_fin
             bateria         = Get-InfoBateria
+            discos          = Get-InfoDiscos
+            monitores       = Get-InfoMonitores
+            ram_modulos     = Get-InfoRam
         }
     } catch { Write-Log "ERROR recolectando datos: $_"; return $null }
-}
-
-
-function Enviar-Json-Ambos {
-    param($path, $objeto, $timeout)
-    $json  = $objeto | ConvertTo-Json -Depth 3
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-    # Enviar a ts (principal)
-    try {
-        Invoke-ConReintentos "$EndpointPrimario$path" 'Post' $bytes 'application/json' $timeout | Out-Null
-        Write-Log "Reporte OK → ts"
-    } catch { Write-Log "ERROR ts: $_" }
-    # Enviar a ag2 (paralelo)
-    try {
-        Invoke-ConReintentos "$EndpointAg2$path" 'Post' $bytes 'application/json' $timeout | Out-Null
-        Write-Log "Reporte OK → ag2"
-    } catch { Write-Log "ERROR ag2: $_" }
 }
 
 function Ejecutar-Limpieza {
@@ -399,7 +465,17 @@ function Enviar-Programas {
     } catch { Write-Log "Error enviando programas: $_" }
 }
 
-
+function Ejecutar-Script {
+    param($scriptB64)
+    $tmp = "C:\Xentra\cmd_$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
+    try {
+        $sc = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($scriptB64))
+        Set-Content -Path $tmp -Value $sc -Encoding UTF8
+        $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp 2>&1
+        return ($out | Out-String).Trim()
+    } catch { return "Error: $_" }
+    finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+}
 
 function Actualizar-Agente {
     try {
@@ -472,12 +548,9 @@ function Procesar-Comando {
             $tit = if ($resp.params.titulo) { $resp.params.titulo } else { 'Xentrasoft' }
             $res.output = Mostrar-Mensaje $txt $tit
         }
-        'cerrar_sesion' {
-            $res.output = "Cerrando sesion..."
-            try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch {}
-            Start-Sleep -Seconds 2
-            logoff
-            return
+        'ejecutar_script' {
+            $script = if ($resp.params -is [string]) { ($resp.params | ConvertFrom-Json).script } else { $resp.params.script }
+            $res.output = if ($script) { Ejecutar-Script $script } else { "Error: script no proporcionado" }
         }
         'actualizar_agente' {
             $res.output = Actualizar-Agente
@@ -571,6 +644,80 @@ function Monitor-Red {
 }
 
 # ============================================
+# A-01: Hash SHA256 para evitar envios redundantes
+# ============================================
+function Get-HashInventario {
+    param($datos)
+    # Campos estables que determinan si el hardware cambio
+    $campos = @(
+        $datos.serial, $datos.nombre_equipo, $datos.modelo,
+        $datos.procesador, $datos.ram_gb, $datos.disco_total_gb,
+        $datos.tipo_disco, $datos.marca_disco, $datos.bus_disco,
+        $datos.version_windows, $datos.arquitectura,
+        $datos.office_producto, $datos.office_version,
+        $datos.gpu, $datos.motherboard, $datos.bios_version,
+        $datos.dominio, $datos.win_activado,
+        $datos.garantia_status, $datos.garantia_fin,
+        $datos.tipo_equipo, $datos.mac
+    )
+    $str = ($campos | ForEach-Object { if ($_ -ne $null) { $_.ToString() } else { '' } }) -join '|'
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($str)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
+    return $hash
+}
+
+function Test-InventarioCambio {
+    param($hashActual)
+    if (-not (Test-Path $ArchivoHash)) { return $true }
+    try {
+        $hashAnterior = (Get-Content $ArchivoHash -Raw).Trim()
+        return ($hashActual -ne $hashAnterior)
+    } catch { return $true }
+}
+
+function Set-HashInventario {
+    param($hash)
+    try { Set-Content -Path $ArchivoHash -Value $hash -Encoding UTF8 } catch {}
+}
+
+# ============================================
+# A-02: Buffer offline CSV para FortiGuard
+# ============================================
+function Guardar-Buffer {
+    param($datos)
+    try {
+        $fila = ($datos.Keys | Sort-Object | ForEach-Object {
+            $v = $datos[$_]
+            if ($v -eq $null) { '""' }
+            else { '"' + $v.ToString().Replace('"','""') + '"' }
+        }) -join ','
+        if (-not (Test-Path $BufferCSV)) {
+            $header = ($datos.Keys | Sort-Object) -join ','
+            Set-Content -Path $BufferCSV -Value $header -Encoding UTF8
+        }
+        Add-Content -Path $BufferCSV -Value $fila -Encoding UTF8
+        Write-Log "[BUFFER] Datos guardados offline: $BufferCSV"
+    } catch { Write-Log "[BUFFER] Error guardando: $_" }
+}
+
+function Enviar-Buffer {
+    if (-not (Test-Path $BufferCSV)) { return }
+    try {
+        $lineas = Get-Content $BufferCSV -Encoding UTF8
+        if ($lineas.Count -lt 2) { Remove-Item $BufferCSV -Force -ErrorAction SilentlyContinue; return }
+        Write-Log "[BUFFER] Intentando reenviar $($lineas.Count - 1) registros offline..."
+        $resp = Invoke-ConFailover '/api/pc/buffer-csv' 'Post' ([System.Text.Encoding]::UTF8.GetBytes(($lineas -join "`n"))) 'text/csv' 20
+        if ($resp) {
+            Write-Log "[BUFFER] Reenvio exitoso. Limpiando buffer."
+            Remove-Item $BufferCSV -Force -ErrorAction SilentlyContinue
+        } else {
+            Write-Log "[BUFFER] Servidor no respondio, buffer conservado."
+        }
+    } catch { Write-Log "[BUFFER] Error en reenvio: $_" }
+}
+
+# ============================================
 # MAIN
 # ============================================
 if (Test-Path 'C:\Xentra') { attrib +h 'C:\Xentra' 2>$null }
@@ -602,12 +749,6 @@ if ($Poll) {
 # MODO LIMPIEZA
 if ($Limpiar) {
     Write-Log "=== Inicio LIMPIEZA ==="
-    # Validar uptime: no ejecutar si el sistema lleva menos de 30 min encendido
-    $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
-    if ($uptime.TotalMinutes -lt 30) {
-        Write-Log "Limpieza omitida: sistema recien encendido ($([int]$uptime.TotalMinutes) min uptime)"
-        exit 0
-    }
     $hoy = $false
     if (Test-Path $MarcaLimpieza) {
         if (((Get-Date) - [datetime](Get-Content $MarcaLimpieza)).Days -ge 3) { $hoy = $true }
@@ -621,8 +762,7 @@ if ($Limpiar) {
     $datos.ultima_limpieza     = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     $datos.disco_libre_gb      = $r.libre
     $datos.disco_total_gb      = $r.total
-    Enviar-Json-Ambos '/api/pc/reportar' $datos 30
-    Write-Log "Reporte limpieza OK"
+    try { Enviar-Json '/api/pc/reportar' $datos 30; Write-Log "Reporte limpieza OK" } catch { Write-Log "ERROR: $_" }
     Enviar-Programas $datos.serial
     Write-Log "=== Fin LIMPIEZA ==="
     exit 0
@@ -631,14 +771,37 @@ if ($Limpiar) {
 # MODO NORMAL
 $datos = Recolectar-Datos
 if (-not $datos) { Write-Log "Error recolectando datos"; exit 1 }
+
+# A-01: Hash SHA256 - solo reportar si el inventario cambio
+$hashActual = Get-HashInventario $datos
+$cambio = Test-InventarioCambio $hashActual
+
 try {
     $resp = Invoke-ConFailover "/api/pc/comandos/$($datos.serial)" 'Get' $null $null 15
     if ($resp.hay) { Procesar-Comando $resp $datos; exit 0 }
 } catch { Write-Log "Error polling: $_" }
-try {
-    Enviar-Json-Ambos '/api/pc/reportar' $datos 20
-    Write-Log "Reporte rapido OK (IP: $($datos.ip_local) | Disco: $($datos.disco_libre_gb) GB | v$Version)"
-} catch { Write-Log "ERROR reporte rapido: $_" }
+
+if ($cambio) {
+    # A-02: Intentar enviar; si falla, guardar en buffer
+    $enviado = $false
+    try {
+        $r = Enviar-Json '/api/pc/reportar' $datos 20
+        if ($r -ne $null) {
+            Set-HashInventario $hashActual
+            $enviado = $true
+            Write-Log "Reporte OK - inventario cambio detectado (IP: $($datos.ip_local) | Disco: $($datos.disco_libre_gb) GB | v$Version)"
+        }
+    } catch {}
+    if (-not $enviado) {
+        Write-Log "Sin conexion - guardando en buffer offline"
+        Guardar-Buffer $datos
+    }
+} else {
+    Write-Log "Sin cambios en inventario - omitiendo reporte (hash: $($hashActual.Substring(0,8))...)"
+}
+
+# A-02: Intentar reenviar buffer si hay conexion
+Enviar-Buffer
 $ep = $false
 if (Test-Path $MarcaProgramas) {
     if (((Get-Date) - [datetime](Get-Content $MarcaProgramas)).Days -ge 1) { $ep = $true }

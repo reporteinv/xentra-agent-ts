@@ -77,8 +77,8 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
         version_windows, arquitectura, win_activado, fecha_inst_so, ultimo_update, bitlocker, dominio,
         office_producto, office_version, antivirus, resolucion, impresora, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
-        garantia_status, garantia_inicio, garantia_fin, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+        garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos, ultimo_reporte)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
@@ -102,6 +102,9 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
         garantia_status=COALESCE(VALUES(garantia_status), garantia_status),
         garantia_inicio=COALESCE(VALUES(garantia_inicio), garantia_inicio),
         garantia_fin=COALESCE(VALUES(garantia_fin), garantia_fin),
+        discos=COALESCE(VALUES(discos), discos),
+        monitores=COALESCE(VALUES(monitores), monitores),
+        ram_modulos=COALESCE(VALUES(ram_modulos), ram_modulos),
         activo=1, ultimo_reporte=NOW()
     `, [
       d.empresa_id, d.serial, d.nombre_equipo||null, d.modelo||null, d.tipo_equipo||null,
@@ -117,7 +120,10 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
       d.office_version||null, d.antivirus||null, d.resolucion||null, d.impresora||null,
       d.uptime_horas||null, d.mb_liberados_ultima||null, d.ultima_limpieza||null,
       d.version_agente||null, d.bateria ? JSON.stringify(d.bateria) : null,
-      d.garantia_status||null, d.garantia_inicio||null, d.garantia_fin||null
+      d.garantia_status||null, d.garantia_inicio||null, d.garantia_fin||null,
+      d.discos ? JSON.stringify(d.discos) : null,
+      d.monitores ? JSON.stringify(d.monitores) : null,
+      d.ram_modulos ? JSON.stringify(d.ram_modulos) : null
     ]);
     const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=?', [d.serial]);
     const pcId = (pcRows as any[])[0]?.id;

@@ -427,25 +427,50 @@ async function verDetalles(pc_id) {
     };
     const imgSrc = modeloImg[pc.modelo] || null;
     const imgHtml = imgSrc ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgSrc}" style="max-height:120px;max-width:100%;object-fit:contain;border-radius:8px;"></div>` : '';
-    document.getElementById('detalleContenido').innerHTML = imgHtml + `
-      <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666;width:45%">Serial</td><td style="padding:0.6rem;font-weight:600">${pc.serial || '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Temp. CPU</td><td style="padding:0.6rem;font-weight:600">${pc.cpu_temp ? pc.cpu_temp + ' °C' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Salud Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_salud ? (pc.disco_salud === 'Healthy' ? 'Saludable' : pc.disco_salud === 'Warning' ? 'Advertencia' : pc.disco_salud === 'Unhealthy' ? 'Crítico' : pc.disco_salud) : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Temp. Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_temp ? pc.disco_temp + ' °C' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Desgaste Disco</td><td style="padding:0.6rem;font-weight:600">${pc.disco_desgaste != null ? pc.disco_desgaste + '%' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Procesador</td><td style="padding:0.6rem;font-weight:600">${pc.procesador || '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">RAM</td><td style="padding:0.6rem;font-weight:600">${pc.ram_gb ? pc.ram_gb + ' GB' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Windows</td><td style="padding:0.6rem;font-weight:600">${pc.version_windows || '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Usuario</td><td style="padding:0.6rem;font-weight:600">${pc.usuario ? pc.usuario.split('\\').pop() : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">IP Local</td><td style="padding:0.6rem;font-weight:600">${pc.ip_local || '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco libre</td><td style="padding:0.6rem;font-weight:600">${pc.disco_libre_gb ? pc.disco_libre_gb + ' GB' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Disco total</td><td style="padding:0.6rem;font-weight:600">${pc.disco_total_gb ? pc.disco_total_gb + ' GB' : '-'}</td></tr>
-        <tr style="border-bottom:1px solid #eee"><td style="padding:0.6rem;color:#666">Última limpieza</td><td style="padding:0.6rem;font-weight:600">${pc.ultima_limpieza ? new Date(pc.ultima_limpieza).toLocaleString('es-CO') : '-'}</td></tr>
-        <tr><td style="padding:0.6rem;color:#666">MB liberados</td><td style="padding:0.6rem;font-weight:600">${pc.mb_liberados_ultima != null ? (pc.mb_liberados_ultima/1024).toFixed(2) + ' GB' : '-'}</td></tr>
-      </table>
-    `;
-    // Seccion garantia Lenovo
+    // Helper grid cards
+    const fmtF = f => { if(!f) return '—'; const d=new Date(f); if(isNaN(d)) return f; return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear(); };
+    const di = (l,v) => `<div class="det-item"><div class="det-label">${l}</div><div class="det-val">${v!=null&&v!==''?v:'—'}</div></div>`;
+    const _discos = pc.discos ? (typeof pc.discos==='string'?JSON.parse(pc.discos):pc.discos) : [];
+    const _mods = pc.ram_modulos ? (typeof pc.ram_modulos==='string'?JSON.parse(pc.ram_modulos):pc.ram_modulos) : [];
+    const _mons = pc.monitores ? (typeof pc.monitores==='string'?JSON.parse(pc.monitores):pc.monitores) : [];
+    const discosHtml = _discos.map(d => { let v=d.total_gb+' GB / '+d.libre_gb+' GB libre'; if(d.marca||d.tipo||d.bus) v+='<br>'+(d.marca||'')+(d.tipo&&d.bus?' ('+d.tipo+' '+d.bus+')':''); if(d.temp) v+='<br>Temp: '+d.temp+'°C'; if(d.horas) v+=' | '+d.horas+'h uso'; return di('Disco '+d.letra,v); }).join('');
+    const ramHtml = (Array.isArray(_mods)?_mods:[_mods]).map((m,i)=>di('RAM Slot '+(i+1),m.gb+'GB '+(m.marca||'')+' '+(m.tipo||'')+' '+(m.mhz?m.mhz+'MHz':''))).join('');
+    const monHtml = (Array.isArray(_mons)?_mons:[_mons]).map((m,i)=>di('Monitor '+(i+1),m.resolucion+(m.primario?' (primario)':''))).join('');
+    document.getElementById('detalleContenido').innerHTML = imgHtml + `<div class="detalles-grid">
+      ${di('Serial', pc.serial)}
+      ${di('Equipo', pc.nombre_equipo)}
+      ${di('Tipo', pc.tipo_equipo)}
+      ${di('Modelo', pc.modelo)}
+      ${di('Usuario', pc.usuario ? pc.usuario.split('\\').pop() : null)}
+      ${di('Dominio', pc.dominio)}
+      ${di('Red', (pc.tipo_red||'')+(pc.velocidad_red?'  /  '+pc.velocidad_red:'')+'<br>IP: '+(pc.ip_local||'—'))}
+      ${di('MAC', pc.mac)}
+      ${di('Adaptador', pc.adaptador_red)}
+      ${di('RAM', 'Total: '+(pc.ram_gb||'—')+' GB'+(pc.ram_libre_gb?'  /  Libre: '+pc.ram_libre_gb+' GB':''))}
+      ${ramHtml}
+      ${di('CPU', pc.procesador)}
+      ${di('GPU', pc.gpu)}
+      ${di('Temp. CPU', pc.cpu_temp ? pc.cpu_temp+' °C' : null)}
+      ${di('Motherboard', pc.motherboard)}
+      ${di('BIOS', pc.bios_version)}
+      ${discosHtml}
+      ${monHtml}
+      ${di('Windows', pc.version_windows)}
+      ${di('Arquitectura', pc.arquitectura)}
+      ${di('Win Activado', pc.win_activado!=null?(pc.win_activado?'Activado':'Desactivado'):null)}
+      ${di('Office', pc.office_producto)}
+      ${di('Version Office', pc.office_version)}
+      ${di('Antivirus', pc.antivirus)}
+      ${di('Bitlocker', pc.bitlocker!=null?(pc.bitlocker?'Activado':'Desactivado'):null)}
+      ${di('Impresora', pc.impresora)}
+      ${di('Uptime', pc.uptime_horas ? pc.uptime_horas+' hrs' : null)}
+      ${di('Fecha Inst. SO', fmtF(pc.fecha_inst_so))}
+      ${di('Ultimo Update', fmtF(pc.ultimo_update))}
+      ${di('Ultimo Reporte', fmtF(pc.ultimo_reporte))}
+      ${di('Version Agente', pc.version_agente)}
+      ${di('Ultima Limpieza', fmtF(pc.ultima_limpieza))}
+      ${di('MB Liberados', pc.mb_liberados_ultima!=null?(pc.mb_liberados_ultima/1024).toFixed(2)+' GB':null)}
+    </div>`;
     let garantiaHtml = '';
     if (pc.modelo_oficial || pc.garantia_fin) {
       const gStatus = pc.garantia_status || 'pendiente';
