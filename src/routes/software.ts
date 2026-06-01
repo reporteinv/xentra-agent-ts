@@ -52,7 +52,7 @@ router.get('/api/stats/programas-raros', async (req: Request, res: Response) => 
 router.post('/api/programas-raros/estado', async (req: Request, res: Response) => {
   try {
     const { nombre, fabricante, estado, actualizado_por } = req.body;
-    if (!nombre || !['sospechoso','permitido','bloqueado'].includes(estado))
+    if (!nombre || !['sospechoso','permitido','bloqueado','driver'].includes(estado))
       return res.status(400).json({ error: 'Datos invalidos' });
 
     const [matches]: any = await pool.query(

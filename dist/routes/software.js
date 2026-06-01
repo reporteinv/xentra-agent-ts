@@ -53,7 +53,7 @@ router.get('/api/stats/programas-raros', async (req, res) => {
 router.post('/api/programas-raros/estado', async (req, res) => {
     try {
         const { nombre, fabricante, estado, actualizado_por } = req.body;
-        if (!nombre || !['sospechoso', 'permitido', 'bloqueado'].includes(estado))
+        if (!nombre || !['sospechoso', 'permitido', 'bloqueado', 'driver'].includes(estado))
             return res.status(400).json({ error: 'Datos invalidos' });
         const [matches] = await db_1.default.query('SELECT DISTINCT nombre, fabricante FROM pcs_programas WHERE nombre = ? OR nombre LIKE ?', [nombre, nombre + '%']);
         if (matches.length > 0) {
