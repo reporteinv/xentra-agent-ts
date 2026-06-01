@@ -43,6 +43,15 @@ echo  ========================================
 echo                SETUP v3.8
 echo  ========================================
 echo.
+echo  [0/5] Limpiando instalacion previa...
+schtasks /Delete /TN "XentraAgent" /F > nul 2>&1
+schtasks /Delete /TN "XentraAgentPoll" /F > nul 2>&1
+schtasks /Delete /TN "XentraAgentLimpieza" /F > nul 2>&1
+schtasks /Delete /TN "XentraAgentUI" /F > nul 2>&1
+attrib -h "C:\Xentra" > nul 2>&1
+if exist "C:\Xentra" rmdir /S /Q "C:\Xentra" > nul 2>&1
+echo  [0/5] OK
+echo.
 echo  [1/5] Preparando directorio...
 if not exist "C:\Xentra" mkdir "C:\Xentra"
 copy /Y "%SRCDIR%xentra-agent.ps1" "C:\Xentra\xentra-agent.ps1" > nul

@@ -428,9 +428,9 @@ async function verDetalles(pc_id) {
     const imgSrc = modeloImg[pc.modelo] || null;
     const imgHtml = imgSrc ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgSrc}" style="max-height:120px;max-width:100%;object-fit:contain;border-radius:8px;"></div>` : '';
     // Helper grid cards
-    const fmtF = f => { if(!f) return '—'; const d=new Date(f); if(isNaN(d)) return f; return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear(); };
+    const fmtF = f => { if(!f) return '—'; const d=new Date(f); if(isNaN(d)) return f; return d.toLocaleString('es-CO'); };
     const di = (l,v) => `<div class="det-item"><div class="det-label">${l}</div><div class="det-val">${v!=null&&v!==''?v:'—'}</div></div>`;
-    const _discos = pc.discos ? (typeof pc.discos==='string'?JSON.parse(pc.discos):pc.discos) : [];
+    const _discos = pc.discos ? (() => { let d = typeof pc.discos === "string" ? JSON.parse(pc.discos) : pc.discos; return Array.isArray(d) ? d : [d]; })() : [];
     const _mods = pc.ram_modulos ? (typeof pc.ram_modulos==='string'?JSON.parse(pc.ram_modulos):pc.ram_modulos) : [];
     const _mons = pc.monitores ? (typeof pc.monitores==='string'?JSON.parse(pc.monitores):pc.monitores) : [];
     const discosHtml = _discos.map(d => { let v=d.total_gb+' GB / '+d.libre_gb+' GB libre'; if(d.marca||d.tipo||d.bus) v+='<br>'+(d.marca||'')+(d.tipo&&d.bus?' ('+d.tipo+' '+d.bus+')':''); if(d.temp) v+='<br>Temp: '+d.temp+'°C'; if(d.horas) v+=' | '+d.horas+'h uso'; return di('Disco '+d.letra,v); }).join('');
