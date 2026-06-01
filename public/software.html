@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico">
+  <title>Software</title>
+  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="stylesheet" href="/dashboard.css?v=2">
+  <script src="/js/xlsx.min.js"></script>
+  <style>
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+    .kpi{background:#1e2a38;color:white;border-radius:10px;padding:1.2rem 1.5rem;border-top:3px solid #3498db}
+    .kpi-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.4rem}
+    .kpi-value{font-size:2rem;font-weight:700}
+    .kpi.sus{border-top-color:#e74c3c}.kpi.sus .kpi-value{color:#e74c3c}
+    .kpi.ok{border-top-color:#27ae60}.kpi.ok .kpi-value{color:#27ae60}
+    .chart-box{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+    body.dark .chart-box{background:#1e2a38}
+    body.dark{background:#111d2b;color:#cdd9e5}
+    body.dark header{background:#0d1b2a}
+    body.dark .kpi{background:#0d1b2a}
+    body.dark select{background:#1e2a38;color:#cdd9e5;border-color:#2a3f55}
+    body.dark td,body.dark th{border-color:#2a3f55;color:#cdd9e5}
+    select{font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid #ddd;background:white;color:#1a1a1a;cursor:pointer}
+    table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+    th{padding:10px 12px;text-align:center;font-weight:500;font-size:12px;color:#888;border-bottom:2px solid #f0f0f0}
+    td{padding:9px 12px;text-align:center;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    body.dark th{border-bottom-color:#2a3f55}
+    body.dark td{border-bottom-color:#2a3f55}
+    tr:hover td{background:rgba(52,152,219,0.05)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚠️ Software</h1>
+    <nav style="display:flex;align-items:center;gap:10px">
+      <a href="/" style="color:white;text-decoration:none;font-size:0.9rem">← Volver</a>
+      <button id="btnDark" onclick="toggleDark()" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:white;cursor:pointer;font-size:0.9rem">🌙</button>
+    </nav>
+  </header>
+  <main>
+    <section class="kpis">
+      <div class="kpi"><div class="kpi-label">Total detectados</div><div class="kpi-value" id="kpi-total">-</div></div>
+      <div class="kpi sus"><div class="kpi-label">Sospechosos</div><div class="kpi-value" id="kpi-sus">-</div></div>
+      <div class="kpi ok"><div class="kpi-label">Permitidos GTI</div><div class="kpi-value" id="kpi-ok">-</div></div>
+    </section>
+    <section>
+      <div class="chart-box" style="padding:1.5rem">
+        <div style="display:flex;gap:10px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
+          <select id="filtro-estado">
+            <option value="">Todos los estados</option>
+            <option value="sospechoso">Sospechoso</option>
+            <option value="permitido">Permitido</option>
+          </select>
+          <select id="filtro-area"><option value="">Todas las áreas</option></select>
+          <span style="font-size:13px;color:#888;margin-left:auto" id="contador-raros"></span>
+          <button onclick="exportarFiltrado('sospechoso')" style="padding:6px 12px;background:#e74c3c;color:white;border-radius:6px;border:none;cursor:pointer;font-size:13px">📊 Sospechosos .xlsx</button>
+          <button onclick="exportarFiltrado('permitido')" style="padding:6px 12px;background:#27ae60;color:white;border-radius:6px;border:none;cursor:pointer;font-size:13px">📊 Permitidos .xlsx</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <colgroup><col style="width:22%"><col style="width:15%"><col style="width:6%"><col style="width:22%"><col style="width:13%"><col style="width:11%"><col style="width:11%"></colgroup>
+            <thead>
+              <tr>
+                <th>Programa</th><th>Fabricante</th><th>PCs</th>
+                <th class="col-usuario">Usuario</th><th class="col-areas">Áreas</th>
+                <th class="col-estado">Estado</th><th>Acción GTI</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-raros"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    function toggleDark(){const d=document.body.classList.toggle('dark');localStorage.setItem('dark',d?'1':'0');document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
+    if(localStorage.getItem('dark')==='1'){document.body.classList.add('dark');document.getElementById('btnDark').textContent='☀️'}
+    let todosLosRaros=[];
+    const EXCLUIR=[/^microsoft \.net/i,/^microsoft asp\.net/i,/^microsoft visual c\+\+/i,/^microsoft visual studio/i,/^microsoft windows desktop/i,/\bKB\d+\b/i,/update for /i,/hotfix/i,/security update/i,/cumulative update/i,/^java \d+ update/i,/^microsoft office proof/i,/^microsoft report viewer/i,/^microsoft sql server/i,/^amd ryzen balanced/i,/^amd sbxxx/i,/^amd_chipset/i,/^amd psp/i,/^amd chipset/i,/^nvidia/i,/^microsoft update health/i,/^lenovo/i,/^java\(tm\)/i,/^intel\(r\)/i,/^intel /i,/^asistente para la instalaci/i,/^comprobaci.n de estado de pc/i,/^windows subsystem/i,/^copilot/i,/^google update helper/i,/^java auto updater/i,/^realtek audio/i,/^glpi agent/i,/^microsoft edge/i,/webview2 runtime/i,/^msxml/i,/^office 16 click-to-run/i,/^microsoft search in bing/i,/^dynamic application loader/i,/^powershell 7/i,/^teams machine-wide/i];
+    const GRUPOS=[{key:'office',label:'Microsoft Office',regex:/^microsoft office|^office 16|^aplicaciones de microsoft 365/i},{key:'vcpp',label:'Microsoft Visual C++',regex:/^microsoft visual c\+\+/i},{key:'dotnet',label:'Microsoft .NET',regex:/^microsoft \.net/i},{key:'aspnet',label:'Microsoft ASP.NET Core',regex:/^microsoft asp\.net core/i},{key:'sharepoint',label:'Microsoft SharePoint',regex:/^microsoft sharepoint/i},{key:'powerbi',label:'Microsoft Power BI',regex:/^microsoft power bi/i},{key:'zip',label:'7-Zip',regex:/^7-zip/i},{key:'winrar',label:'WinRAR',regex:/^winrar/i},{key:'pdf24',label:'PDF24 Creator',regex:/^pdf24/i},{key:'python',label:'Python',regex:/^python/i},{key:'java',label:'Java',regex:/^java 8 update/i},{key:'canon',label:'Canon',regex:/^canon|^scanserver|^captureontouch/i},{key:'epson',label:'Epson',regex:/^epson|^document capture pro/i},{key:'toshiba',label:'TOSHIBA',regex:/^toshiba/i},{key:'elogic',label:'Elogic Monitor',regex:/^elogic monitor/i}];
+    function badgeEstado(e){const s={sospechoso:'background:#e74c3c;color:#fff',permitido:'background:#27ae60;color:#fff',bloqueado:'background:#1a1a2e;color:#e74c3c;border:1px solid #c0392b;font-weight:700'};const l={sospechoso:'Sospechoso',permitido:'Permitido',bloqueado:'🚫 Bloqueado'};return`<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;${s[e]||''}">${l[e]||e}</span>`}
+    function botonesAccion(n,f,e){const nn=n.replace(/'/g,"\\'"),ff=(f||'').replace(/'/g,"\\'");if(e==='sospechoso')return`<button onclick="cambiarEstado('${nn}','${ff}','permitido')" style="font-size:11px;padding:2px 10px;border-radius:20px;cursor:pointer;background:#27ae60;color:#fff;border:none;font-weight:500">Permitir</button>`;return`<button onclick="cambiarEstado('${nn}','${ff}','sospechoso')" style="font-size:11px;padding:2px 10px;border-radius:20px;cursor:pointer;background:#e74c3c;color:#fff;border:none;font-weight:500">Sospechoso</button>`}
+    function agrupar(data){const m={},s=[];for(const p of data){const g=GRUPOS.find(x=>x.regex.test(p.nombre));if(g){if(!m[g.key])m[g.key]={...p,nombre:g.label,_isGroup:true};else m[g.key].total_pcs=Math.max(m[g.key].total_pcs,p.total_pcs)}else s.push(p)}return[...s,...GRUPOS.filter(g=>m[g.key]).map(g=>m[g.key])]}
+    function renderTabla(data){const fe=document.getElementById('filtro-estado').value,fa=document.getElementById('filtro-area').value,ms=fe==='';document.querySelectorAll('.col-estado').forEach(el=>el.style.display=ms?'':'none');const filtrados=data.filter(p=>{if(fe&&p.estado!==fe)return false;if(fa&&!(p.areas||'').includes(fa))return false;if(fe==='permitido'&&EXCLUIR.some(r=>r.test(p.nombre)))return false;return true});document.getElementById('contador-raros').textContent=filtrados.length+' programas';document.getElementById('tabla-raros').innerHTML=filtrados.map(p=>`<tr><td style="text-align:left">${p.nombre}</td><td style="color:#888">${p.fabricante||'—'}</td><td>${p.total_pcs}</td><td style="color:#888;font-size:12px">${p.usuarios||'—'}</td><td style="color:#888;font-size:12px">${p.areas||'—'}</td><td class="col-estado">${badgeEstado(p.estado)}</td><td>${botonesAccion(p.nombre,p.fabricante,p.estado)}</td></tr>`).join('')}
+    async function cambiarEstado(n,f,e){await fetch('/api/programas-raros/estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:n,fabricante:f,estado:e,actualizado_por:'GTI'})});await cargarRaros()}
+    async function cargarRaros(){const res=await fetch('/api/stats/programas-raros');const data=await res.json();const agrupados=agrupar(data.programas);todosLosRaros=agrupados;document.getElementById('kpi-total').textContent=agrupados.length;document.getElementById('kpi-sus').textContent=data.kpis.sospechosos;document.getElementById('kpi-ok').textContent=data.kpis.permitidos;const areas=[...new Set(data.programas.flatMap(p=>(p.areas||'').split(' / ')))].filter(Boolean).sort();const sel=document.getElementById('filtro-area');sel.innerHTML='<option value="">Todas las áreas</option>'+areas.map(a=>`<option value="${a}">${a}</option>`).join('');renderTabla(todosLosRaros)}
+    function exportarFiltrado(e){const fa=document.getElementById('filtro-area').value;const f=todosLosRaros.filter(p=>{if(p.estado!==e)return false;if(fa&&!(p.areas||'').includes(fa))return false;if(e==='sospechoso'&&EXCLUIR.some(r=>r.test(p.nombre)))return false;return true});const d=f.map(p=>({'Programa':p.nombre,'Fabricante':p.fabricante||'-','PCs':p.total_pcs,'Usuarios':p.usuarios||'-','Areas':p.areas||'-'}));const ws=XLSX.utils.json_to_sheet(d);ws['!cols']=[{wch:42},{wch:30},{wch:8},{wch:40},{wch:30}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,e==='sospechoso'?'Sospechosos':'Permitidos GTI');XLSX.writeFile(wb,e+'s_'+new Date().toISOString().slice(0,10)+'.xlsx')}
+    document.getElementById('filtro-estado').addEventListener('change',()=>renderTabla(todosLosRaros));
+    document.getElementById('filtro-area').addEventListener('change',()=>renderTabla(todosLosRaros));
+    cargarRaros();
+  </script>
+</body>
+</html>

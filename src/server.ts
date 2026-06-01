@@ -73,6 +73,11 @@ function requireAuth(
 }
 
 // Rutas públicas (sin autenticación)
+app.get('/sw9k3', (req: any, res: any) => {
+  if (!req.session?.autenticado) return res.redirect('/login.html');
+  res.sendFile(path.join(__dirname, '../public/software.html'));
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 app.get('/api/metrics', (req, res, next) => next());
 app.use((req, res, next) => {
@@ -98,6 +103,8 @@ import exportsRouter = require("./routes/exports");
 import limpiezaRouter = require("./routes/limpieza");
 import comandosRouter = require("./routes/comandos");
 import agenteRouter = require("./routes/agente");
+import licenciasRouter from "./routes/licencias";
+import softwareRouter from "./routes/software";
 
 app.use(authRouter);
 app.use(pcsRouter);
@@ -106,6 +113,8 @@ app.use(exportsRouter);
 app.use(limpiezaRouter);
 app.use(comandosRouter);
 app.use(agenteRouter);
+app.use(licenciasRouter);
+app.use(softwareRouter);
 
 app.get("/health", (req, res) =>
   res.json({ ok: true, service: "xentra-agent-ts" }),

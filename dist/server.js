@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const logger_1 = require("./modules/logger");
@@ -75,6 +78,11 @@ function requireAuth(req, res, next) {
     next();
 }
 // Rutas públicas (sin autenticación)
+app.get('/sw9k3', (req, res) => {
+    if (!req.session?.autenticado)
+        return res.redirect('/login.html');
+    res.sendFile(path.join(__dirname, '../public/software.html'));
+});
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 app.get('/api/metrics', (req, res, next) => next());
 app.use((req, res, next) => {
@@ -100,6 +108,8 @@ const exportsRouter = require("./routes/exports");
 const limpiezaRouter = require("./routes/limpieza");
 const comandosRouter = require("./routes/comandos");
 const agenteRouter = require("./routes/agente");
+const licencias_1 = __importDefault(require("./routes/licencias"));
+const software_1 = __importDefault(require("./routes/software"));
 app.use(authRouter);
 app.use(pcsRouter);
 app.use(statsRouter);
@@ -107,6 +117,8 @@ app.use(exportsRouter);
 app.use(limpiezaRouter);
 app.use(comandosRouter);
 app.use(agenteRouter);
+app.use(licencias_1.default);
+app.use(software_1.default);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.listen(PORT, () => (0, logger_1.logInfo)("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }));
 const alertas_pcs_1 = require("./cron/alertas-pcs");
