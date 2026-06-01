@@ -69,6 +69,8 @@ function esExcluido(nombre: string): boolean {
 
 router.get('/api/stats/programas-raros', async (req: Request, res: Response) => {
   try {
+    const [[countRow]]: any = await pool.query('SELECT COUNT(*) as total FROM pcs WHERE activo=1 AND deleted_at IS NULL');
+    const totalPcsActivos = countRow.total || 1;
     const [rows]: any = await pool.query(`
       SELECT
         pp.nombre, pp.fabricante,

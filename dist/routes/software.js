@@ -66,6 +66,8 @@ function esExcluido(nombre) {
 }
 router.get('/api/stats/programas-raros', async (req, res) => {
     try {
+        const [[countRow]] = await db_1.default.query('SELECT COUNT(*) as total FROM pcs WHERE activo=1 AND deleted_at IS NULL');
+        const totalPcsActivos = countRow.total || 1;
         const [rows] = await db_1.default.query(`
       SELECT
         pp.nombre, pp.fabricante,
