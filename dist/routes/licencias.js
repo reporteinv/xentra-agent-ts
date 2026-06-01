@@ -10,9 +10,9 @@ const router = (0, express_1.Router)();
 // GET /api/licencias — listar licencias de la empresa
 router.get('/api/licencias', async (req, res) => {
     try {
-        const empresaId = req.session?.usuario?.empresa_id;
-        if (!empresaId)
+        if (!req.session?.autenticado)
             return res.status(401).json({ error: 'No autenticado' });
+        const empresaId = req.session?.empresa_id || 26;
         const [rows] = await db_1.default.query(`
       SELECT l.*,
         COUNT(DISTINCT p.pc_id) AS instalaciones
@@ -33,9 +33,9 @@ router.get('/api/licencias', async (req, res) => {
 // POST /api/licencias — crear licencia
 router.post('/api/licencias', async (req, res) => {
     try {
-        const empresaId = req.session?.usuario?.empresa_id;
-        if (!empresaId)
+        if (!req.session?.autenticado)
             return res.status(401).json({ error: 'No autenticado' });
+        const empresaId = req.session?.empresa_id || 26;
         const { nombre, fabricante, total, vencimiento, proveedor, notas } = req.body;
         if (!nombre || !total)
             return res.status(400).json({ error: 'nombre y total requeridos' });
@@ -54,9 +54,9 @@ router.post('/api/licencias', async (req, res) => {
 // PUT /api/licencias/:id — editar licencia
 router.put('/api/licencias/:id', async (req, res) => {
     try {
-        const empresaId = req.session?.usuario?.empresa_id;
-        if (!empresaId)
+        if (!req.session?.autenticado)
             return res.status(401).json({ error: 'No autenticado' });
+        const empresaId = req.session?.empresa_id || 26;
         const { nombre, fabricante, total, vencimiento, proveedor, notas } = req.body;
         await db_1.default.query(`
       UPDATE xentra_licencias SET nombre=?, fabricante=?, total=?, vencimiento=?, proveedor=?, notas=?
@@ -73,9 +73,9 @@ router.put('/api/licencias/:id', async (req, res) => {
 // DELETE /api/licencias/:id — soft delete
 router.delete('/api/licencias/:id', async (req, res) => {
     try {
-        const empresaId = req.session?.usuario?.empresa_id;
-        if (!empresaId)
+        if (!req.session?.autenticado)
             return res.status(401).json({ error: 'No autenticado' });
+        const empresaId = req.session?.empresa_id || 26;
         await db_1.default.query(`
       UPDATE xentra_licencias SET activo=0 WHERE id=? AND empresa_id=?
     `, [req.params.id, empresaId]);
@@ -90,9 +90,9 @@ router.delete('/api/licencias/:id', async (req, res) => {
 // GET /api/licencias/alertas — vencidas o por vencer en 30 días
 router.get('/api/licencias/alertas', async (req, res) => {
     try {
-        const empresaId = req.session?.usuario?.empresa_id;
-        if (!empresaId)
+        if (!req.session?.autenticado)
             return res.status(401).json({ error: 'No autenticado' });
+        const empresaId = req.session?.empresa_id || 26;
         const [rows] = await db_1.default.query(`
       SELECT *, DATEDIFF(vencimiento, NOW()) AS dias_restantes
       FROM xentra_licencias
@@ -106,6 +106,22 @@ router.get('/api/licencias/alertas', async (req, res) => {
     catch (err) {
         (0, logger_1.logError)('GET_LICENCIAS_ALERTAS', err.message);
         res.status(500).json({ error: 'Error consultando alertas' });
+    }
+});
+// GET /api/licencias/programas-disponibles — lista programas únicos para el dropdown
+router.get('/api/licencias/programas-disponibles', async (req, res) => {
+    try {
+        const [rows] = await db_1.default.query(`
+      SELECT DISTINCT nombre, fabricante, COUNT(DISTINCT pc_id) AS total_pcs
+      FROM pcs_programas
+      GROUP BY nombre, fabricante
+      ORDER BY nombre ASC
+    `);
+        res.json(rows);
+    }
+    catch (err) {
+        (0, logger_1.logError)('GET_PROGRAMAS_DISPONIBLES', err.message);
+        res.status(500).json({ error: 'Error consultando programas' });
     }
 });
 exports.default = router;
