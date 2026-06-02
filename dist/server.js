@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const public_1 = __importDefault(require("./routes/public"));
+const tokens_1 = __importDefault(require("./routes/tokens"));
 const express = require("express");
 const logger_1 = require("./modules/logger");
 const helmet = require("helmet");
@@ -124,6 +125,7 @@ app.use(licencias_1.default);
 app.use(software_1.default);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.use(public_1.default);
+app.use(tokens_1.default);
 app.listen(PORT, () => (0, logger_1.logInfo)("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }));
 const alertas_pcs_1 = require("./cron/alertas-pcs");
 // Cron: verificar PCs sin reporte cada 60 minutos

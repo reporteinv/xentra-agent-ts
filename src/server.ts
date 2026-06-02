@@ -1,4 +1,5 @@
 import publicRoutes from './routes/public';
+import tokensRouter from './routes/tokens';
 import express = require("express");
 import { logInfo, logError } from './modules/logger';
 import helmet = require("helmet");
@@ -124,6 +125,7 @@ app.get("/health", (req, res) =>
 
 
 app.use(publicRoutes);
+app.use(tokensRouter);
 
 app.listen(PORT, () =>
   logInfo("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }),

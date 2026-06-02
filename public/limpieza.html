@@ -50,7 +50,36 @@
         >
           ⚡ Nueva limpieza masiva
         </button>
+        <button onclick="abrirTokens()" style="background:#1e2a38;border:1px solid #2a3f55;color:#7f8c8d;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;margin-left:8px">🔑 API</button>
       </section>
+
+      <!-- Modal Tokens -->
+      <div id="modalTokens" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:#161b22;border:1px solid #2a3f55;border-radius:12px;width:560px;max-width:95vw;padding:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <span style="font-size:15px;font-weight:500;color:#cdd9e5">🔑 API Tokens</span>
+            <button onclick="cerrarTokens()" style="background:none;border:none;color:#7f8c8d;font-size:18px;cursor:pointer">✕</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <input id="tkDesc" placeholder="Descripción del token" style="flex:1;background:#1e2a38;border:1px solid #2a3f55;color:#cdd9e5;border-radius:6px;padding:7px 10px;font-size:13px">
+            <input id="tkExpira" type="date" style="background:#1e2a38;border:1px solid #2a3f55;color:#cdd9e5;border-radius:6px;padding:7px 10px;font-size:13px">
+            <button onclick="generarToken()" style="background:#27ae60;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer">+ Generar</button>
+          </div>
+          <div id="tkNuevo" style="display:none;background:#1a3a1a;border:1px solid #27ae60;border-radius:6px;padding:10px;margin-bottom:12px;font-size:12px;color:#27ae60;word-break:break-all"></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="color:#7f8c8d;border-bottom:1px solid #2a3f55">
+                <th style="text-align:left;padding:6px">Token</th>
+                <th style="text-align:left;padding:6px">Descripción</th>
+                <th style="text-align:left;padding:6px">Último uso</th>
+                <th style="text-align:left;padding:6px">Expira</th>
+                <th style="padding:6px"></th>
+              </tr>
+            </thead>
+            <tbody id="tkTabla"></tbody>
+          </table>
+        </div>
+      </div>
 
       <!-- KPIs -->
       <section class="kpis" id="lm-kpis" style="display: none">
@@ -159,5 +188,59 @@
         document.getElementById("btnDark").textContent = "☀️";
       }
     </script>
-  </body>
+    <script>
+    async function abrirTokens() {
+      document.getElementById('modalTokens').style.display = 'flex';
+      await cargarTokens();
+    }
+    function cerrarTokens() {
+      document.getElementById('modalTokens').style.display = 'none';
+      document.getElementById('tkNuevo').style.display = 'none';
+    }
+    async function cargarTokens() {
+      const res = await fetch('/api/tokens');
+      const tokens = await res.json();
+      const tbody = document.getElementById('tkTabla');
+      tbody.innerHTML = tokens.length === 0
+        ? '<tr><td colspan="5" style="color:#7f8c8d;padding:12px;text-align:center">Sin tokens generados</td></tr>'
+        : tokens.map(t => `
+          <tr style="border-bottom:1px solid #2a3f55">
+            <td style="padding:6px;color:#cdd9e5;font-family:monospace">${t.token.slice(0,20)}...</td>
+            <td style="padding:6px;color:#cdd9e5">${t.descripcion||'-'}</td>
+            <td style="padding:6px;color:#7f8c8d">${t.ultimo_uso ? new Date(t.ultimo_uso).toLocaleDateString('es-CO') : 'Nunca'}</td>
+            <td style="padding:6px;color:#7f8c8d">${t.expira_en ? new Date(t.expira_en).toLocaleDateString('es-CO') : 'Sin vencer'}</td>
+            <td style="padding:6px;display:flex;gap:4px">
+              <button onclick="revocarToken(${t.id})" style="background:#4a2a00;color:#e67e22;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer">Revocar</button>
+              <button onclick="eliminarToken(${t.id})" style="background:#4a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer">Eliminar</button>
+            </td>
+          </tr>`).join('');
+    }
+    async function generarToken() {
+      const desc = document.getElementById('tkDesc').value || 'Token API';
+      const exp = document.getElementById('tkExpira').value || null;
+      const res = await fetch('/api/tokens', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ descripcion: desc, expira_en: exp })
+      });
+      const data = await res.json();
+      if (data.token) {
+        const div = document.getElementById('tkNuevo');
+        div.style.display = 'block';
+        div.textContent = '✓ Token generado (guárdalo, no se mostrará de nuevo): ' + data.token;
+        await cargarTokens();
+      }
+    }
+    async function revocarToken(id) {
+      if (!confirm('¿Revocar este token? Quedará inactivo pero visible.')) return;
+      await fetch('/api/tokens/' + id, { method: 'DELETE' });
+      await cargarTokens();
+    }
+    async function eliminarToken(id) {
+      if (!confirm('¿Eliminar permanentemente este token?')) return;
+      await fetch('/api/tokens/' + id + '/eliminar', { method: 'DELETE' });
+      await cargarTokens();
+    }
+  </script>
+</body>
 </html>
