@@ -74,6 +74,8 @@ function requireAuth(req, res, next) {
         return next();
     if (req.path.startsWith("/api/public/"))
         return next();
+    if (req.path.startsWith("/api/pc/"))
+        return next();
     if (!req.session.autenticado) {
         if (req.path.startsWith("/api/"))
             return res.status(401).json({ error: "No autenticado" });

@@ -11,6 +11,10 @@ router.post("/api/limpiar-masivo", async (req, res) => {
         const campanaId = camp.insertId;
         const valores = pcsActivos.map((p) => [campanaId, p.id]);
         await pool.query("INSERT INTO comandos_limpieza (campana_id, pc_id) VALUES ?", [valores]);
+        // Insertar comando limpiar en pcs_comandos para que el agente lo recoja
+        const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+        const cmdValores = pcsActivos.map((p) => [p.id, 'limpiar', null, expira]);
+        await pool.query("INSERT INTO pcs_comandos (pc_id, comando, params, expira) VALUES ?", [cmdValores]);
         res.json({
             ok: true,
             campana_id: campanaId,

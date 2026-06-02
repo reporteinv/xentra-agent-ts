@@ -324,3 +324,25 @@ router.get("/api/eventos-red/:serial", async (req: Request, res: Response) => {
 });
 
 export = router;
+
+router.get('/api/pc/comando-limpieza/:serial', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers['x-agent-token'];
+    if (token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'Token invalido' });
+    const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=? AND activo=1', [req.params.serial]);
+    const pc = (pcRows as any[])[0];
+    if (!pc) return res.json({ limpiar: false });
+    const [cmdRows] = await pool.query<RowDataPacket[]>(
+      `SELECT id FROM comandos_limpieza
+       WHERE pc_id=? AND estado='pendiente' AND (fecha_expiracion IS NULL OR fecha_expiracion > NOW())
+       LIMIT 1`,
+      [pc.id]
+    );
+    const cmd = (cmdRows as any[])[0];
+    if (!cmd) return res.json({ limpiar: false });
+    await pool.query("UPDATE comandos_limpieza SET estado='ejecutado', fecha_ejecucion=NOW() WHERE id=?", [cmd.id]);
+    res.json({ limpiar: true, comando_id: cmd.id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
