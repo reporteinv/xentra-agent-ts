@@ -8,6 +8,7 @@ const archiver = require("archiver").default || require("archiver");
 import fs = require("fs");
 import { lookupYActualizar } from "../modules/lenovo-lookup";
 import { ipLookupYActualizar } from "../modules/ip-lookup";
+import { emitirEvento } from '../sse';
 
 const router = express.Router();
 
@@ -146,6 +147,23 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
     if (pcId && d.mb_liberados_ultima) {
       await pool.query('INSERT INTO pcs_historial_limpiezas (pc_id, mb_liberados, disco_libre_gb) VALUES (?,?,?)',
         [pcId, d.mb_liberados_ultima, d.disco_libre_gb]);
+    }
+    // Emitir evento WebSocket a todos los clientes conectados
+    if (pcId) {
+      const [pcActualizado] = await pool.query<RowDataPacket[]>(
+        `SELECT id, serial, nombre_equipo, modelo, usuario, ip_local,
+          disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
+          ultimo_reporte, garantia_status,
+          CASE
+            WHEN ultimo_reporte < DATE_SUB(NOW(), INTERVAL 1 DAY) THEN 'inactivo'
+            WHEN (disco_libre_gb / disco_total_gb) < 0.20 THEN 'alerta'
+            ELSE 'activo'
+          END AS estado
+        FROM pcs WHERE id=?`, [pcId]
+      );
+      if ((pcActualizado as any[])[0]) {
+        emitirEvento('pc:update', (pcActualizado as any[])[0]);
+      }
     }
     res.json({ ok: true, mensaje: 'Reporte recibido' });
   } catch (err: any) {

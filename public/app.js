@@ -23,7 +23,7 @@ async function cargarPcs() {
 
 let paginaActual = 1;
 
-let sortCol = "ultima_limpieza";
+let sortCol = "ultimo_reporte";
 let sortDir = "desc";
 
 function sortData(data) {
@@ -68,8 +68,8 @@ function renderTabla(data) {
   }
 
   tbody.innerHTML = pagData.map(pc => `
-    <tr>
-      <td><span class="badge ${pc.estado}">${pc.estado}</span></td>
+    <tr data-id="${pc.id}">
+      <td><span class="badge ${pc.estado} pc-estado">${pc.estado}</span></td>
       <td><span style="width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;background:${coloresPc[pc.id] ? _colMapPc[coloresPc[pc.id]] : 'transparent'}"></span><code style="cursor:pointer; color:#3498db;" onclick="verHistorial(${pc.id}, '${pc.serial}')">${pc.serial}</code></td>
       <td>${pc.modelo_oficial || pc.modelo || '-'}</td>
       <td>${pc.usuario ? pc.usuario.split('\\').pop() : '-'}</td>
@@ -87,7 +87,7 @@ function renderTabla(data) {
       <div style="font-size:0.75rem;color:#888;margin-top:2px">
        ${Math.round((pc.disco_libre_gb/pc.disco_total_gb)*100)}% libre
       </div>` : '-'}</td>
-	<td>${formatFecha(pc.ultima_limpieza)}</td>
+	<td>${formatFecha(pc.ultimo_reporte)}</td>
       <td>${pc.mb_liberados_ultima != null ? (pc.mb_liberados_ultima / 1024).toFixed(1) + ' GB' : '-'}</td>
       <td style='text-align:center;vertical-align:middle'><div class="config-dropdown" style="position:relative;display:inline-block">
         <button class="btn-config" style="display:block;margin:auto" onclick="toggleConfig(this, event)">⚙️</button>

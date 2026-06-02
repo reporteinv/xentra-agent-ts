@@ -120,11 +120,13 @@ app.get("/health", (req, res) =>
   res.json({ ok: true, service: "xentra-agent-ts" }),
 );
 
+
 app.listen(PORT, () =>
   logInfo("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }),
 );
 
 import { verificarPcsSinReporte } from './cron/alertas-pcs';
+import { agregarCliente } from './sse';
 
 // Cron: verificar PCs sin reporte cada 60 minutos
 setInterval(async () => {

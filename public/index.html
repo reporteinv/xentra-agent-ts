@@ -261,8 +261,8 @@
             <th onclick="setSort('espacio_libre_gb')" style="cursor: pointer">
               Disco libre ⇅
             </th>
-            <th onclick="setSort('ultima_limpieza')" style="cursor: pointer">
-              Última limpieza ⇅
+            <th onclick="setSort('ultimo_reporte')" style="cursor: pointer">
+              Último reporte ⇅
             </th>
             <th
               onclick="setSort('mb_liberados_ultima')"
@@ -804,5 +804,35 @@
     </div>
   </div>
 
+  <script>
+    let _ultimoReporte = {};
+    async function pollPCs() {
+      try {
+        const res = await fetch('/api/pcs');
+        const pcs = await res.json();
+        if (!Array.isArray(pcs)) return;
+        pcs.forEach(pc => {
+          const prev = _ultimoReporte[pc.id];
+          if (prev && prev !== pc.ultimo_reporte) {
+            const fila = document.querySelector(`tr[data-id="${pc.id}"]`);
+            if (fila) {
+              const tdEstado = fila.querySelector('.pc-estado');
+              if (tdEstado) {
+                tdEstado.className = 'badge ' + pc.estado + ' pc-estado';
+                tdEstado.textContent = pc.estado;
+              }
+              fila.style.transition = 'background 0.5s';
+              fila.style.background = 'rgba(39,174,96,0.15)';
+              setTimeout(() => fila.style.background = '', 1500);
+              console.log('[POLL] PC actualizado:', pc.serial);
+            }
+          }
+          _ultimoReporte[pc.id] = pc.ultimo_reporte;
+        });
+      } catch(e) {}
+    }
+    setInterval(pollPCs, 15000);
+    pollPCs();
+  </script>
 </body>
 </html>
