@@ -3,7 +3,7 @@ set "SRCDIR=%~dp0"
 cd /d "%~dp0"
 chcp 65001 >nul
 
-whoami /groups | find "S-1-16-12288" >nul 2>&1
+net session >nul 2>&1
 if %errorlevel% neq 0 (
     cls
     echo.
@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.8
+echo                SETUP v3.9
 echo  ========================================
 echo.
 echo   1. Instalar
@@ -40,7 +40,7 @@ goto menu
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.8
+echo                SETUP v3.9
 echo  ========================================
 echo.
 echo  [0/5] Limpiando instalacion previa...
@@ -86,7 +86,7 @@ echo  [5/5] Listo.
 echo.
 echo  ========================================
 echo   === Instalacion EXITOSA ===
-echo   Agente:   v3.8
+echo   Agente:   v3.9
 echo   Polling:  cada 20 min
 echo   Limpieza: diaria %HORA_ST%
 echo  ========================================
@@ -98,7 +98,7 @@ exit
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.8
+echo                SETUP v3.9
 echo  ========================================
 echo.
 echo  [1/5] Copiando agente...
@@ -131,7 +131,7 @@ echo  [5/5] Listo.
 echo.
 echo  ========================================
 echo   === Actualizacion EXITOSA ===
-echo   Agente:   v3.8
+echo   Agente:   v3.9
 echo   Polling:  cada 20 min
 echo   Limpieza: diaria %HORA_ST%
 echo  ========================================
@@ -145,7 +145,7 @@ echo.
 echo  Desinstalando ...
 echo.
 for /f %%a in ('powershell -Command "(Get-CimInstance Win32_BIOS).SerialNumber.Trim()"') do set SERIAL=%%a
-powershell -Command "try { Invoke-RestMethod -Uri 'https://ts.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_473ab41349459abb698a1cc0eae6e212'} -TimeoutSec 10 } catch { try { Invoke-RestMethod -Uri 'https://app.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_473ab41349459abb698a1cc0eae6e212'} -TimeoutSec 10 } catch {} }" > nul 2>&1
+powershell -Command "try { Invoke-RestMethod -Uri 'https://ag2.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_ungrd_2026'} -TimeoutSec 10 } catch { try { Invoke-RestMethod -Uri 'https://ts.xentrasoft.com/api/pc/pcs/%SERIAL%' -Method Delete -Headers @{'X-Agent-Token'='xnt_ungrd_2026'} -TimeoutSec 10 } catch {} }" > nul 2>&1
 schtasks /Delete /TN "XentraAgent" /F 2>nul
 schtasks /Delete /TN "XentraAgentPoll" /F 2>nul
 schtasks /Delete /TN "XentraAgentLimpieza" /F 2>nul

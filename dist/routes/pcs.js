@@ -62,7 +62,7 @@ router.post("/api/pc/reportar", async (req, res) => {
             return res.status(400).json({ error: "empresa_id invalido" });
         d.empresa_id = empresaIdNum;
         await pool.query(`
-      INSERT INTO pcs (empresa_id, serial, nombre_equipo, modelo, tipo_equipo, usuario, ip_local, mac,
+      INSERT INTO pcs (empresa_id, serial, nombre_equipo, modelo, tipo_equipo, usuario, ip_local, ip_tipo, mac,
         tipo_red, adaptador_red, velocidad_red, ram_gb, ram_libre_gb, marca_ram, procesador, gpu,
         motherboard, bios_version, disco_total_gb, disco_libre_gb, tipo_disco, marca_disco, bus_disco,
         disco_salud, disco_temp, disco_desgaste, cpu_temp,
@@ -70,11 +70,11 @@ router.post("/api/pc/reportar", async (req, res) => {
         office_producto, office_version, antivirus, resolucion, impresora, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
         garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
-        ip_local=VALUES(ip_local), mac=VALUES(mac), tipo_red=VALUES(tipo_red),
+        ip_local=VALUES(ip_local), ip_tipo=VALUES(ip_tipo), mac=VALUES(mac), tipo_red=VALUES(tipo_red),
         adaptador_red=VALUES(adaptador_red), velocidad_red=VALUES(velocidad_red),
         ram_gb=VALUES(ram_gb), ram_libre_gb=VALUES(ram_libre_gb), marca_ram=VALUES(marca_ram),
         procesador=VALUES(procesador), gpu=VALUES(gpu), motherboard=VALUES(motherboard),
@@ -100,7 +100,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         activo=1, ultimo_reporte=NOW()
     `, [
             d.empresa_id, d.serial, d.nombre_equipo || null, d.modelo || null, d.tipo_equipo || null,
-            d.usuario || null, d.ip_local || null, d.mac || null, d.tipo_red || null, d.adaptador_red || null,
+            d.usuario || null, d.ip_local || null, d.ip_tipo || null, d.mac || null, d.tipo_red || null, d.adaptador_red || null,
             d.velocidad_red || null, d.ram_gb || null, d.ram_libre_gb || null, d.marca_ram || null,
             d.procesador || null, d.gpu || null, d.motherboard || null, d.bios_version || null,
             d.disco_total_gb || null, d.disco_libre_gb || null, d.tipo_disco || null, d.marca_disco || null,

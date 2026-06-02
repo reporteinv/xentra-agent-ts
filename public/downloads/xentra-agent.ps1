@@ -22,8 +22,8 @@ add-type @"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $EmpresaId        = '26'
-$EndpointPrimario = 'https://ts.xentrasoft.com'
-$EndpointRespaldo = 'https://ag2.xentrasoft.com'
+$EndpointPrimario = 'https://ag2.xentrasoft.com'
+$EndpointRespaldo = 'https://ts.xentrasoft.com'
 $AgentToken       = 'xnt_ungrd_2026'
 $LogFile          = 'C:\Xentra\xentra-agent.log'
 $MarcaLimpieza    = 'C:\Xentra\ultima-limpieza.txt'
