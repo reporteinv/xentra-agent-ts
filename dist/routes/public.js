@@ -48,4 +48,36 @@ router.get('/api/public/stats', apiAuth_1.apiAuth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+router.get('/api/public/programas', apiAuth_1.apiAuth, async (req, res) => {
+    try {
+        const empresaId = req.apiEmpresaId;
+        const { estado, nombre } = req.query;
+        let where = 'WHERE p.empresa_id=? AND p.activo=1 AND p.deleted_at IS NULL';
+        const params = [empresaId];
+        if (estado) {
+            where += ' AND pe.estado=?';
+            params.push(estado);
+        }
+        if (nombre) {
+            where += ' AND pp.nombre LIKE ?';
+            params.push('%' + nombre + '%');
+        }
+        const [rows] = await db_1.default.query(`
+      SELECT pp.nombre, pp.fabricante,
+        COUNT(DISTINCT pp.pc_id) AS total_pcs,
+        COALESCE(pe.estado, 'sospechoso') AS estado,
+        GROUP_CONCAT(DISTINCT p.usuario ORDER BY p.usuario SEPARATOR ', ') AS usuarios
+      FROM pcs_programas pp
+      JOIN pcs p ON p.id = pp.pc_id
+      LEFT JOIN programas_estado pe ON pe.nombre = pp.nombre
+      ${where}
+      GROUP BY pp.nombre, pp.fabricante, pe.estado
+      ORDER BY total_pcs DESC
+    `, params);
+        res.json({ total: rows.length, programas: rows });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 exports.default = router;

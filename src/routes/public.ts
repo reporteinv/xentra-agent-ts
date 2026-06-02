@@ -46,4 +46,30 @@ router.get('/api/public/stats', apiAuth, async (req: Request, res: Response) => 
   }
 });
 
+router.get('/api/public/programas', apiAuth, async (req: Request, res: Response) => {
+  try {
+    const empresaId = (req as any).apiEmpresaId;
+    const { estado, nombre } = req.query;
+    let where = 'WHERE p.empresa_id=? AND p.activo=1 AND p.deleted_at IS NULL';
+    const params: any[] = [empresaId];
+    if (estado) { where += ' AND pe.estado=?'; params.push(estado); }
+    if (nombre) { where += ' AND pp.nombre LIKE ?'; params.push('%' + nombre + '%'); }
+    const [rows] = await pool.query<RowDataPacket[]>(`
+      SELECT pp.nombre, pp.fabricante,
+        COUNT(DISTINCT pp.pc_id) AS total_pcs,
+        COALESCE(pe.estado, 'sospechoso') AS estado,
+        GROUP_CONCAT(DISTINCT p.usuario ORDER BY p.usuario SEPARATOR ', ') AS usuarios
+      FROM pcs_programas pp
+      JOIN pcs p ON p.id = pp.pc_id
+      LEFT JOIN programas_estado pe ON pe.nombre = pp.nombre
+      ${where}
+      GROUP BY pp.nombre, pp.fabricante, pe.estado
+      ORDER BY total_pcs DESC
+    `, params);
+    res.json({ total: (rows as any[]).length, programas: rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
