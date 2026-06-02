@@ -443,7 +443,7 @@ async function verDetalles(pc_id) {
       ${di('Modelo', pc.modelo)}
       ${di('Usuario', pc.usuario ? pc.usuario.split('\\').pop() : null)}
       ${di('Dominio', pc.dominio)}
-      ${di('Red', (pc.tipo_red||'')+(pc.velocidad_red?'  /  '+pc.velocidad_red:'')+'<br>IP: '+(pc.ip_local||'—'))}
+      ${di('Red', (pc.tipo_red||'')+(pc.velocidad_red?'  /  '+pc.velocidad_red:'')+'<br>IP: '+(pc.ip_local||'—')+(pc.ip_tipo?' <span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:0.75rem;font-weight:600;background:'+(pc.ip_tipo==='Estatica'?'#dcfce7;color:#166534':'#dbeafe;color:#1e40af')+'">'+pc.ip_tipo+'</span>':''))}
       ${di('MAC', pc.mac)}
       ${di('Adaptador', pc.adaptador_red)}
       ${di('RAM', 'Total: '+(pc.ram_gb||'—')+' GB'+(pc.ram_libre_gb?'  /  Libre: '+pc.ram_libre_gb+' GB':''))}

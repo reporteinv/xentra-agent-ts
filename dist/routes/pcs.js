@@ -139,7 +139,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         }
         // Emitir evento WebSocket a todos los clientes conectados
         if (pcId) {
-            const [pcActualizado] = await pool.query(`SELECT id, serial, nombre_equipo, modelo, usuario, ip_local,
+            const [pcActualizado] = await pool.query(`SELECT id, serial, nombre_equipo, modelo, usuario, ip_local, ip_tipo,
           disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
           ultimo_reporte, garantia_status,
           CASE
@@ -162,7 +162,7 @@ router.post("/api/pc/reportar", async (req, res) => {
 router.get("/api/pcs", async (req, res) => {
     try {
         const [rows] = await pool.query(`
-      SELECT id, serial, nombre_equipo, modelo, usuario, ip_local,
+      SELECT id, serial, nombre_equipo, modelo, usuario, ip_local, ip_tipo,
         disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
         ultimo_reporte, observacion, modelo_oficial, garantia_status, garantia_inicio, garantia_fin,
         CASE
