@@ -1,3 +1,4 @@
+import publicRoutes from './routes/public';
 import express = require("express");
 import { logInfo, logError } from './modules/logger';
 import helmet = require("helmet");
@@ -64,6 +65,7 @@ function requireAuth(
     return next();
   if (req.path === "/favicon.ico") return next();
   if (req.path.startsWith("/assets/")) return next();
+  if (req.path.startsWith("/api/public/")) return next();
   if (!(req.session as any).autenticado) {
     if (req.path.startsWith("/api/"))
       return res.status(401).json({ error: "No autenticado" });
@@ -120,6 +122,8 @@ app.get("/health", (req, res) =>
   res.json({ ok: true, service: "xentra-agent-ts" }),
 );
 
+
+app.use(publicRoutes);
 
 app.listen(PORT, () =>
   logInfo("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }),
