@@ -56,10 +56,15 @@
       <!-- Modal Tokens -->
       <div id="modalTokens" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
         <div style="background:#161b22;border:1px solid #2a3f55;border-radius:12px;width:560px;max-width:95vw;padding:24px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <span style="font-size:15px;font-weight:500;color:#cdd9e5">🔑 API Tokens</span>
             <button onclick="cerrarTokens()" style="background:none;border:none;color:#7f8c8d;font-size:18px;cursor:pointer">✕</button>
           </div>
+          <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #2a3f55">
+            <button id="tab-tokens" onclick="switchTab('tokens')" style="background:none;border:none;border-bottom:2px solid #3498db;color:#cdd9e5;padding:6px 16px;font-size:12px;cursor:pointer;margin-bottom:-1px">Tokens</button>
+            <button id="tab-docs" onclick="switchTab('docs')" style="background:none;border:none;border-bottom:2px solid transparent;color:#7f8c8d;padding:6px 16px;font-size:12px;cursor:pointer;margin-bottom:-1px">Documentación</button>
+          </div>
+          <div id="panel-tokens">
           <div style="display:flex;gap:8px;margin-bottom:16px">
             <input id="tkDesc" placeholder="Descripción del token" style="flex:1;background:#1e2a38;border:1px solid #2a3f55;color:#cdd9e5;border-radius:6px;padding:7px 10px;font-size:13px">
             <input id="tkExpira" type="date" style="background:#1e2a38;border:1px solid #2a3f55;color:#cdd9e5;border-radius:6px;padding:7px 10px;font-size:13px">
@@ -78,6 +83,38 @@
             </thead>
             <tbody id="tkTabla"></tbody>
           </table>
+          </div>
+          <div id="panel-docs" style="display:none;font-size:12px;color:#cdd9e5">
+            <div style="background:#1e2a38;border-radius:6px;padding:10px;margin-bottom:10px">
+              <div style="color:#7f8c8d;font-size:11px;margin-bottom:4px">Base URL</div>
+              <code style="color:#3498db">https://ag2.xentrasoft.com</code>
+              <div style="color:#7f8c8d;font-size:11px;margin-top:8px;margin-bottom:4px">Header requerido</div>
+              <code style="color:#27ae60">Authorization: Bearer xnt_...</code>
+            </div>
+            <div style="margin-bottom:8px;font-weight:500;color:#7f8c8d;font-size:11px">ENDPOINTS</div>
+            <div style="background:#1e2a38;border-radius:6px;padding:10px;margin-bottom:8px">
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+                <span style="background:#0c447c;color:#b5d4f4;font-size:10px;padding:2px 6px;border-radius:4px;font-family:monospace">GET</span>
+                <code style="color:#cdd9e5">/api/public/stats</code>
+              </div>
+              <pre style="font-size:10px;color:#7f8c8d;margin:0">/api/public/stats — Resumen ejecutivo</pre>
+            </div>
+            <div style="background:#1e2a38;border-radius:6px;padding:10px;margin-bottom:8px">
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+                <span style="background:#0c447c;color:#b5d4f4;font-size:10px;padding:2px 6px;border-radius:4px;font-family:monospace">GET</span>
+                <code style="color:#cdd9e5">/api/public/pcs</code>
+              </div>
+              <pre style="font-size:10px;color:#7f8c8d;margin:0">/api/public/pcs — Inventario completo</pre>
+            </div>
+            <div style="background:#1e2a38;border-radius:6px;padding:10px">
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+                <span style="background:#0c447c;color:#b5d4f4;font-size:10px;padding:2px 6px;border-radius:4px;font-family:monospace">GET</span>
+                <code style="color:#cdd9e5">/api/public/programas</code>
+              </div>
+              <pre style="font-size:10px;color:#7f8c8d;margin:0">/api/public/programas?estado=sospechoso
+/api/public/programas?nombre=chrome</pre>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -189,6 +226,14 @@
       }
     </script>
     <script>
+    function switchTab(tab) {
+      document.getElementById('panel-tokens').style.display = tab === 'tokens' ? 'block' : 'none';
+      document.getElementById('panel-docs').style.display = tab === 'docs' ? 'block' : 'none';
+      document.getElementById('tab-tokens').style.borderBottomColor = tab === 'tokens' ? '#3498db' : 'transparent';
+      document.getElementById('tab-tokens').style.color = tab === 'tokens' ? '#cdd9e5' : '#7f8c8d';
+      document.getElementById('tab-docs').style.borderBottomColor = tab === 'docs' ? '#3498db' : 'transparent';
+      document.getElementById('tab-docs').style.color = tab === 'docs' ? '#cdd9e5' : '#7f8c8d';
+    }
     async function abrirTokens() {
       document.getElementById('modalTokens').style.display = 'flex';
       await cargarTokens();
