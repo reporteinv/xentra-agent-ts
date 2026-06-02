@@ -1,5 +1,5 @@
 # ============================================
-# Xentra-PC-Agent v3.3
+# Xentra-PC-Agent v3.9
 # Xentrasoft - Agente universal por cliente
 # ============================================
 
@@ -23,8 +23,8 @@ add-type @"
 
 $EmpresaId        = '26'
 $EndpointPrimario = 'https://ts.xentrasoft.com'
-$EndpointRespaldo = 'https://app.xentrasoft.com'
-$AgentToken       = 'xnt_473ab41349459abb698a1cc0eae6e212'
+$EndpointRespaldo = 'https://ag2.xentrasoft.com'
+$AgentToken       = 'xnt_ungrd_2026'
 $LogFile          = 'C:\Xentra\xentra-agent.log'
 $MarcaLimpieza    = 'C:\Xentra\ultima-limpieza.txt'
 $MarcaProgramas   = 'C:\Xentra\ultima-programas.txt'
@@ -32,7 +32,7 @@ $ArchivoIntervalo = 'C:\Xentra\intervalo.txt'
 $ArchivoHash      = 'C:\Xentra\ultimo-hash.txt'
 $BufferCSV        = 'C:\Xentra\buffer-offline.csv'
 $MaxReintentos    = 5
-$Version          = '3.8'
+$Version          = '3.9'
 
 $IntervaloMin = 20
 if (Test-Path $ArchivoIntervalo) {
@@ -380,7 +380,9 @@ function Recolectar-Datos {
         } catch {}
         $bl = $null
         try { $bv = Get-BitLockerVolume -MountPoint C: -ErrorAction SilentlyContinue; $bl = ($bv.ProtectionStatus -eq 'On') } catch {}
-        $ip = (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp,Manual | Where-Object { $_.IPAddress -notlike '169.*' -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -First 1).IPAddress
+        $ipObj = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '169.*' -and $_.IPAddress -ne '127.0.0.1' -and $_.IPAddress -notlike '172.17.*' } | Select-Object -First 1
+        $ip    = if ($ipObj) { $ipObj.IPAddress } else { $null }
+        $ipTipo = if ($ipObj) { if ($ipObj.PrefixOrigin -eq 'Manual') { 'Estatica' } else { 'DHCP' } } else { $null }
         $ram_marca = ((Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1).Manufacturer)
         return @{
             empresa_id      = [int]$EmpresaId
@@ -390,6 +392,7 @@ function Recolectar-Datos {
             tipo_equipo     = Get-TipoEquipo
             usuario         = $usuario
             ip_local        = $ip
+            ip_tipo         = $ipTipo
             mac             = $infoRed.mac
             tipo_red        = $infoRed.tipo_red
             adaptador_red   = $infoRed.adaptador
@@ -658,7 +661,7 @@ function Get-HashInventario {
         $datos.gpu, $datos.motherboard, $datos.bios_version,
         $datos.dominio, $datos.win_activado,
         $datos.garantia_status, $datos.garantia_fin,
-        $datos.tipo_equipo, $datos.mac
+        $datos.tipo_equipo, $datos.mac, $datos.ip_tipo
     )
     $str = ($campos | ForEach-Object { if ($_ -ne $null) { $_.ToString() } else { '' } }) -join '|'
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($str)
