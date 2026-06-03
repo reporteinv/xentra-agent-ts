@@ -120,7 +120,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         const [pcRows] = await pool.query('SELECT id FROM pcs WHERE serial=?', [d.serial]);
         const pcId = pcRows[0]?.id;
         if (pcId) {
-            const [pcData] = await pool.query('SELECT lookup_status, lookup_fecha, modelo FROM pcs WHERE id=?', [pcId]);
+            const [pcData] = await pool.query('SELECT lookup_status, lookup_fecha, modelo FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.id=?', [pcId]);
             const pc = pcData[0];
             const necesitaLookup = !pc?.lookup_fecha ||
                 pc?.lookup_status === 'pendiente' ||
@@ -139,15 +139,15 @@ router.post("/api/pc/reportar", async (req, res) => {
         }
         // Emitir evento WebSocket a todos los clientes conectados
         if (pcId) {
-            const [pcActualizado] = await pool.query(`SELECT id, serial, nombre_equipo, modelo, usuario, ip_local, ip_tipo,
-          disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
-          ultimo_reporte, garantia_status,
+            const [pcActualizado] = await pool.query(`SELECT p.id, p.serial, p.nombre_equipo, COALESCE(ma.modelo_display, p.modelo) AS modelo, p.usuario, p.ip_local, p.ip_tipo,
+          p.disco_libre_gb, p.disco_total_gb, p.mb_liberados_ultima, p.ultima_limpieza,
+          p.ultimo_reporte, p.garantia_status,
           CASE
             WHEN ultimo_reporte < DATE_SUB(NOW(), INTERVAL 1 DAY) THEN 'inactivo'
             WHEN (disco_libre_gb / disco_total_gb) < 0.20 THEN 'alerta'
             ELSE 'activo'
           END AS estado
-        FROM pcs WHERE id=?`, [pcId]);
+        FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.id=?`, [pcId]);
             if (pcActualizado[0]) {
                 (0, sse_1.emitirEvento)('pc:update', pcActualizado[0]);
             }
@@ -162,16 +162,16 @@ router.post("/api/pc/reportar", async (req, res) => {
 router.get("/api/pcs", async (req, res) => {
     try {
         const [rows] = await pool.query(`
-      SELECT id, serial, nombre_equipo, modelo, usuario, ip_local, ip_tipo,
-        disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
-        ultimo_reporte, observacion, modelo_oficial, garantia_status, garantia_inicio, garantia_fin,
+      SELECT p.id, p.serial, p.nombre_equipo, COALESCE(ma.modelo_display, p.modelo) AS modelo, p.usuario, p.ip_local, p.ip_tipo,
+        p.disco_libre_gb, p.disco_total_gb, p.mb_liberados_ultima, p.ultima_limpieza,
+        p.ultimo_reporte, p.observacion, p.modelo_oficial, p.garantia_status, p.garantia_inicio, p.garantia_fin,
         CASE
-          WHEN ultimo_reporte < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'inactivo'
-          WHEN ultimo_reporte < DATE_SUB(NOW(), INTERVAL 3 DAY) THEN 'alerta'
-          WHEN (disco_libre_gb / disco_total_gb) < 0.20 THEN 'alerta'
+          WHEN p.ultimo_reporte < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'inactivo'
+          WHEN p.ultimo_reporte < DATE_SUB(NOW(), INTERVAL 3 DAY) THEN 'alerta'
+          WHEN (p.disco_libre_gb / p.disco_total_gb) < 0.20 THEN 'alerta'
           ELSE 'activo'
         END AS estado
-      FROM pcs WHERE activo=1 AND deleted_at IS NULL ORDER BY ultimo_reporte DESC
+      FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.activo=1 AND p.deleted_at IS NULL ORDER BY p.ultimo_reporte DESC
     `);
         res.json(rows);
     }
@@ -209,7 +209,7 @@ router.get("/api/descargar-agente", (req, res) => {
 });
 router.get("/api/pcs/:id", async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT * FROM pcs WHERE id=?", [req.params.id]);
+        const [rows] = await pool.query("SELECT p.*, COALESCE(ma.modelo_display, p.modelo) AS modelo FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.id=?", [req.params.id]);
         if (!rows.length)
             return res.status(404).json({ error: "PC no encontrado" });
         res.json(rows[0]);
@@ -316,6 +316,46 @@ router.get('/api/pc/comando-limpieza/:serial', async (req, res) => {
     }
     catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+// ENDPOINT: recibir programas del agente
+router.post("/api/pc/programas", async (req, res) => {
+    try {
+        const token = req.headers["x-agent-token"];
+        if (token !== process.env.AGENT_TOKEN)
+            return res.status(401).json({ error: "Token invalido" });
+        const { serial, programas } = req.body;
+        if (!serial || !programas)
+            return res.status(400).json({ error: "Datos requeridos" });
+        const [pcRows] = await pool.query("SELECT id FROM pcs WHERE serial=?", [serial]);
+        if (!pcRows.length)
+            return res.status(404).json({ error: "PC no encontrado" });
+        const pc_id = pcRows[0].id;
+        await pool.query("DELETE FROM pcs_programas WHERE pc_id=?", [pc_id]);
+        if (programas.length > 0) {
+            const values = programas.map((p) => [
+                pc_id, p.nombre, p.version || null, p.fabricante || null
+            ]);
+            await pool.query("INSERT INTO pcs_programas (pc_id, nombre, version, fabricante) VALUES ?", [values]);
+        }
+        res.json({ ok: true, total: programas.length });
+    }
+    catch (err) {
+        res.status(500).json({ error: "Error interno" });
+    }
+});
+// ENDPOINT: obtener programas de un PC
+router.get("/api/programas/:serial", async (req, res) => {
+    try {
+        const [rows] = await pool.query(`SELECT pp.nombre, pp.version, pp.fabricante
+       FROM pcs_programas pp
+       JOIN pcs p ON pp.pc_id = p.id
+       WHERE p.serial = ?
+       ORDER BY pp.nombre ASC`, [req.params.serial]);
+        res.json(rows);
+    }
+    catch (err) {
+        res.status(500).json({ error: "Error interno" });
     }
 });
 module.exports = router;
