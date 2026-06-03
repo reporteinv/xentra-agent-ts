@@ -76,7 +76,6 @@ export async function lookupYActualizar(pcId: number, serial: string, marca: str
 
   await pool.query(
     `UPDATE pcs SET
-      marca = ?,
       modelo_oficial = ?,
       garantia_inicio = ?,
       garantia_fin = ?,
@@ -84,6 +83,6 @@ export async function lookupYActualizar(pcId: number, serial: string, marca: str
       lookup_fecha = NOW(),
       lookup_status = 'ok'
     WHERE id = ?`,
-    [datos.brand, datos.productName, toISO(datos.warrantyStart), toISO(datos.warrantyEnd), status, pcId]
+    [datos.productName, toISO(datos.warrantyStart), toISO(datos.warrantyEnd), status, pcId]
   );
 }

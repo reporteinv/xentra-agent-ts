@@ -62,12 +62,11 @@ async function lookupYActualizar(pcId, serial, marca) {
     const toISO = (f) => f.split('/').reverse().join('-');
     const status = calcularStatus(datos.warrantyEnd);
     await pool.query(`UPDATE pcs SET
-      marca = ?,
       modelo_oficial = ?,
       garantia_inicio = ?,
       garantia_fin = ?,
       garantia_status = ?,
       lookup_fecha = NOW(),
       lookup_status = 'ok'
-    WHERE id = ?`, [datos.brand, datos.productName, toISO(datos.warrantyStart), toISO(datos.warrantyEnd), status, pcId]);
+    WHERE id = ?`, [datos.productName, toISO(datos.warrantyStart), toISO(datos.warrantyEnd), status, pcId]);
 }

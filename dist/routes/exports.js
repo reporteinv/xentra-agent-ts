@@ -14,8 +14,8 @@ router.get("/api/export/excel", async (req, res) => {
     try {
         const [rows] = await pool.query(`
       SELECT nombre_equipo, serial, modelo, usuario, ip_local,
-        espacio_libre_gb, espacio_total_gb, mb_liberados_ultima, ultima_limpieza,
-        ram_gb, procesador, version_windows, ultimo_reporte, usb_bloqueado,
+        disco_libre_gb, disco_total_gb, mb_liberados_ultima, ultima_limpieza,
+        ram_gb, procesador, version_windows, ultimo_reporte,
         CASE WHEN ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 3 DAY) THEN 'Activo'
           WHEN ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'Alerta'
           ELSE 'Inactivo' END AS estado
@@ -31,8 +31,8 @@ router.get("/api/export/excel", async (req, res) => {
             { header: "Modelo", key: "modelo", width: 25 },
             { header: "Usuario", key: "usuario_limpio", width: 30 },
             { header: "IP", key: "ip_local", width: 16 },
-            { header: "Disco libre (GB)", key: "espacio_libre_gb", width: 16 },
-            { header: "Disco total (GB)", key: "espacio_total_gb", width: 16 },
+            { header: "Disco libre (GB)", key: "disco_libre_gb", width: 16 },
+            { header: "Disco total (GB)", key: "disco_total_gb", width: 16 },
             { header: "GB liberados", key: "mb_liberados_ultima", width: 14 },
             { header: "Ultima limpieza", key: "ultima_limpieza", width: 20 },
             { header: "Procesador", key: "procesador", width: 35 },
@@ -52,11 +52,11 @@ router.get("/api/export/excel", async (req, res) => {
             modelo: r.modelo || "-",
             usuario_limpio: limpiarUsuario(r.usuario),
             ip_local: r.ip_local,
-            espacio_libre_gb: r.espacio_libre_gb
-                ? Math.round(r.espacio_libre_gb)
+            disco_libre_gb: r.disco_libre_gb
+                ? Math.round(r.disco_libre_gb)
                 : null,
-            espacio_total_gb: r.espacio_total_gb
-                ? Math.round(r.espacio_total_gb)
+            disco_total_gb: r.disco_total_gb
+                ? Math.round(r.disco_total_gb)
                 : null,
             mb_liberados_ultima: r.mb_liberados_ultima != null
                 ? parseFloat((r.mb_liberados_ultima / 1024).toFixed(1))
@@ -98,8 +98,8 @@ router.get("/api/export/historial-excel", async (req, res) => {
         }
         const whereStr = where.length ? "WHERE " + where.join(" AND ") : "";
         const [rows] = await pool.query(`
-      SELECT p.serial, p.modelo, p.usuario, h.fecha, h.mb_liberados, h.espacio_libre_gb
-      FROM historial_limpiezas h JOIN pcs p ON p.id=h.pc_id ${whereStr} ORDER BY h.fecha DESC
+      SELECT p.serial, p.modelo, p.usuario, h.fecha, h.mb_liberados, h.disco_libre_gb
+      FROM pcs_historial_limpiezas h JOIN pcs p ON p.id=h.pc_id ${whereStr} ORDER BY h.fecha DESC
     `, params);
         const wb = new ExcelJS.Workbook();
         wb.creator = "Xentra-Agent";
@@ -111,7 +111,7 @@ router.get("/api/export/historial-excel", async (req, res) => {
             { header: "Usuario", key: "usuario_limpio", width: 30 },
             { header: "Fecha", key: "fecha", width: 22 },
             { header: "GB liberados", key: "mb_liberados", width: 14 },
-            { header: "Disco libre (GB)", key: "espacio_libre_gb", width: 16 },
+            { header: "Disco libre (GB)", key: "disco_libre_gb", width: 16 },
         ];
         ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
         ws.getRow(1).fill = {
@@ -128,8 +128,8 @@ router.get("/api/export/historial-excel", async (req, res) => {
             mb_liberados: r.mb_liberados != null
                 ? parseFloat((r.mb_liberados / 1024).toFixed(2))
                 : null,
-            espacio_libre_gb: r.espacio_libre_gb
-                ? Math.round(r.espacio_libre_gb)
+            disco_libre_gb: r.disco_libre_gb
+                ? Math.round(r.disco_libre_gb)
                 : null,
         }));
         const fecha = new Date().toISOString().slice(0, 10);
@@ -148,7 +148,7 @@ router.get("/api/export/programas-excel", async (req, res) => {
             return res.status(401).json({ error: "No autenticado" });
         const [rows] = await pool.query(`
       SELECT p.serial, p.modelo, p.usuario, pr.nombre, pr.version, pr.fabricante
-      FROM programas pr JOIN pcs p ON p.id=pr.pc_id ORDER BY p.serial ASC, pr.nombre ASC
+      FROM pcs_programas pr JOIN pcs p ON p.id=pr.pc_id ORDER BY p.serial ASC, pr.nombre ASC
     `);
         const wb = new ExcelJS.Workbook();
         wb.creator = "Xentra-Agent";
@@ -204,7 +204,7 @@ router.get("/api/export/programas-excel", async (req, res) => {
 router.get("/api/export/pdf", async (req, res) => {
     try {
         const [rows] = await pool.query(`
-      SELECT nombre_equipo, serial, modelo, usuario, ip_local, espacio_libre_gb, espacio_total_gb,
+      SELECT nombre_equipo, serial, modelo, usuario, ip_local, disco_libre_gb, disco_total_gb,
         mb_liberados_ultima, ultima_limpieza, ram_gb, procesador, version_windows,
         CASE WHEN ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 3 DAY) THEN 'Activo'
           WHEN ultimo_reporte >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'Alerta'
@@ -287,8 +287,8 @@ router.get("/api/export/pdf", async (req, res) => {
                 { text: limpiarUsuario(r.usuario).substring(0, 20) },
                 { text: r.ip_local || "-" },
                 {
-                    text: r.espacio_libre_gb
-                        ? Math.round(r.espacio_libre_gb) + " GB"
+                    text: r.disco_libre_gb
+                        ? Math.round(r.disco_libre_gb) + " GB"
                         : "-",
                 },
                 {
@@ -338,8 +338,8 @@ router.get("/api/export/historial-pdf", async (req, res) => {
         }
         const whereStr = where.length ? "WHERE " + where.join(" AND ") : "";
         const [rows] = await pool.query(`
-      SELECT p.serial, p.modelo, p.usuario, h.fecha, h.mb_liberados, h.espacio_libre_gb
-      FROM historial_limpiezas h JOIN pcs p ON p.id=h.pc_id ${whereStr} ORDER BY h.fecha DESC
+      SELECT p.serial, p.modelo, p.usuario, h.fecha, h.mb_liberados, h.disco_libre_gb
+      FROM pcs_historial_limpiezas h JOIN pcs p ON p.id=h.pc_id ${whereStr} ORDER BY h.fecha DESC
     `, params);
         const fecha = new Date().toISOString().slice(0, 10);
         res.setHeader("Content-Type", "application/pdf");
@@ -415,8 +415,8 @@ router.get("/api/export/historial-pdf", async (req, res) => {
                 r.mb_liberados != null
                     ? (r.mb_liberados / 1024).toFixed(2) + " GB"
                     : "-",
-                r.espacio_libre_gb
-                    ? parseFloat(r.espacio_libre_gb).toFixed(0) + " GB"
+                r.disco_libre_gb
+                    ? parseFloat(r.disco_libre_gb).toFixed(0) + " GB"
                     : "-",
             ];
             cells.forEach((c, i) => {
@@ -443,7 +443,7 @@ router.get("/api/export/programas-pdf", async (req, res) => {
             return res.status(401).json({ error: "No autenticado" });
         const [rows] = await pool.query(`
       SELECT p.serial, p.modelo, p.usuario, pr.nombre, pr.version, pr.fabricante
-      FROM programas pr JOIN pcs p ON p.id=pr.pc_id ORDER BY p.serial ASC, pr.nombre ASC
+      FROM pcs_programas pr JOIN pcs p ON p.id=pr.pc_id ORDER BY p.serial ASC, pr.nombre ASC
     `);
         const fecha = new Date().toISOString().slice(0, 10);
         res.setHeader("Content-Type", "application/pdf");
