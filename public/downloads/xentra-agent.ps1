@@ -723,6 +723,23 @@ function Enviar-Buffer {
 # ============================================
 # MAIN
 # ============================================
+# ============================================
+# MIGRACION: detectar agente viejo y limpiar
+# ============================================
+$psActual = 'C:\Xentra\xentra-agent.ps1'
+if (Test-Path $psActual) {
+    $contenido = Get-Content $psActual -Raw -ErrorAction SilentlyContinue
+    if ($contenido -match '\$VersionActual') {
+        Write-Log "[MIGRACION] Agente viejo detectado - recreando tareas..."
+        schtasks /Delete /TN "XentraAgent"         /F 2>$null
+        schtasks /Delete /TN "XentraAgentPoll"     /F 2>$null
+        schtasks /Delete /TN "XentraAgentLimpieza" /F 2>$null
+        schtasks /Delete /TN "XentraAgentUI"       /F 2>$null
+        Remove-Item 'C:\Xentra\ultimo-hash.txt' -Force -ErrorAction SilentlyContinue
+        Write-Log "[MIGRACION] Tareas eliminadas - el agente nuevo creara las correctas"
+    }
+}
+
 if (Test-Path 'C:\Xentra') { attrib +h 'C:\Xentra' 2>$null }
 RotarLog
 

@@ -94,6 +94,8 @@ app.get('/api/metrics', (req, res, next) => next());
 app.use((req, res, next) => {
     if (req.path === '/api/metrics')
         return next();
+    if (req.path === '/api/impresora/snmp-reporte')
+        return next();
     requireAuth(req, res, next);
 });
 // No cachear JS y CSS para forzar actualizaciones
@@ -116,6 +118,7 @@ const comandosRouter = require("./routes/comandos");
 const agenteRouter = require("./routes/agente");
 const licencias_1 = __importDefault(require("./routes/licencias"));
 const software_1 = __importDefault(require("./routes/software"));
+const impresoras_1 = __importDefault(require("./routes/impresoras"));
 app.use(authRouter);
 app.use(pcsRouter);
 app.use(statsRouter);
@@ -125,6 +128,7 @@ app.use(comandosRouter);
 app.use(agenteRouter);
 app.use(licencias_1.default);
 app.use(software_1.default);
+app.use("/api/impresora", impresoras_1.default);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.use(public_1.default);
 app.use(tokens_1.default);
