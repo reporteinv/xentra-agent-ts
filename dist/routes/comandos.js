@@ -19,7 +19,7 @@ router.post("/api/comandos/crear", async (req, res) => {
     }
 });
 // Agente consulta comandos pendientes
-router.get("/api/comandos/:serial", async (req, res) => {
+router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], async (req, res) => {
     try {
         const token = req.headers["x-agent-token"];
         if (token !== process.env.AGENT_TOKEN)

@@ -53,7 +53,7 @@ function requireAuth(
   if (req.path === "/api/descargar-agente") return next();
   if (req.path === "/api/pc/reportar") return next();
   if (req.path === "/api/pcs") return next();
-  if (req.path.startsWith("/api/pc/comandos")) return next();
+  if (req.path.startsWith("/api/pc/comandos") || req.path.startsWith("/api/comandos")) return next();
   if (req.path === "/api/pc/programas") return next();
   if (req.path === "/api/pc/evento-red") return next();
   if (req.method === "GET" && req.path.match(/\/api\/pcs\/[^\/]+\/usb/))

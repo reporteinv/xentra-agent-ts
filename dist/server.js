@@ -56,7 +56,7 @@ function requireAuth(req, res, next) {
         return next();
     if (req.path === "/api/pcs")
         return next();
-    if (req.path.startsWith("/api/pc/comandos"))
+    if (req.path.startsWith("/api/pc/comandos") || req.path.startsWith("/api/comandos"))
         return next();
     if (req.path === "/api/pc/programas")
         return next();

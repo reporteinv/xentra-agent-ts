@@ -424,7 +424,16 @@ function Recolectar-Datos {
             office_version  = $infoO.version
             antivirus       = Get-Antivirus
             resolucion      = if ($vc.CurrentHorizontalResolution) { "$($vc.CurrentHorizontalResolution)x$($vc.CurrentVerticalResolution)" } else { $null }
-            impresora       = (Get-CimInstance Win32_Printer | Where-Object { $_.Default -eq $true } | Select-Object -First 1).Name
+            impresora          = (Get-CimInstance Win32_Printer | Where-Object { $_.Default -eq $true } | Select-Object -First 1).Name
+            hojas_impresas_hoy = & {
+                try {
+                    $hoy = (Get-Date).Date
+                    $ev  = Get-WinEvent -LogName "Microsoft-Windows-PrintService/Operational" -ErrorAction SilentlyContinue |
+                           Where-Object { $_.Id -eq 307 -and $_.TimeCreated -ge $hoy }
+                    if ($ev) { ($ev | ForEach-Object { [int]"$($_.Properties[7].Value)" } | Measure-Object -Sum).Sum }
+                    else { 0 }
+                } catch { 0 }
+            }
             uptime_horas    = [math]::Round(((Get-Date) - $boot).TotalHours, 1)
             version_agente  = $Version
             garantia_status = $infoHP.garantia_status
@@ -723,13 +732,14 @@ function Enviar-Buffer {
 # ============================================
 # MAIN
 # ============================================
-# ============================================
 # MIGRACION: detectar agente viejo y limpiar
 # ============================================
 $psActual = 'C:\Xentra\xentra-agent.ps1'
 if (Test-Path $psActual) {
     $contenido = Get-Content $psActual -Raw -ErrorAction SilentlyContinue
-    if ($contenido -match '\$VersionActual') {
+    # El agente viejo declaraba: $VersionActual = '2.x'
+    # Detectar solo si existe como asignacion real (no dentro de un regex)
+    if ($contenido -match '(?m)^\s*\$VersionActual\s*=\s*[''"]') {
         Write-Log "[MIGRACION] Agente viejo detectado - recreando tareas..."
         schtasks /Delete /TN "XentraAgent"         /F 2>$null
         schtasks /Delete /TN "XentraAgentPoll"     /F 2>$null
@@ -828,4 +838,244 @@ if (Test-Path $MarcaProgramas) {
 } else { $ep = $true }
 if ($ep) { Enviar-Programas $datos.serial }
 Verificar-Tareas
+
+# ============================================================
+# SNMP + Print Log - Lectura impresoras de red
+# ============================================================
+function Get-InfoImpresoras {
+    $Community = "public"
+    $Puerto    = 161
+    $TimeoutMs = 3000
+
+    $OIDMap = @{
+        Modelo      = "1.3.6.1.2.1.1.1.0"
+        Serial      = "1.3.6.1.2.1.43.5.1.1.17.1"
+        TotalPaginas= "1.3.6.1.2.1.43.10.2.1.4.1.1"
+        TonerN1     = "1.3.6.1.2.1.43.11.1.1.9.1.1"
+        TonerMax1   = "1.3.6.1.2.1.43.11.1.1.8.1.1"
+        TonerColor1 = "1.3.6.1.2.1.43.12.1.1.4.1.1"
+        TonerN2     = "1.3.6.1.2.1.43.11.1.1.9.1.2"
+        TonerMax2   = "1.3.6.1.2.1.43.11.1.1.8.1.2"
+        TonerColor2 = "1.3.6.1.2.1.43.12.1.1.4.1.2"
+        TonerN3     = "1.3.6.1.2.1.43.11.1.1.9.1.3"
+        TonerMax3   = "1.3.6.1.2.1.43.11.1.1.8.1.3"
+        TonerColor3 = "1.3.6.1.2.1.43.12.1.1.4.1.3"
+        TonerN4     = "1.3.6.1.2.1.43.11.1.1.9.1.4"
+        TonerMax4   = "1.3.6.1.2.1.43.11.1.1.8.1.4"
+        TonerColor4 = "1.3.6.1.2.1.43.12.1.1.4.1.4"
+        PapelNivel  = "1.3.6.1.2.1.43.8.2.1.10.1.1"
+        PapelMax    = "1.3.6.1.2.1.43.8.2.1.9.1.1"
+        ToshBN      = "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.2.1.3"
+        ToshColor   = "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.2.1.1"
+    }
+
+    function Encode-OID($oidStr) {
+        $parts = $oidStr.TrimStart('.') -split '\.'
+        $bytes = [System.Collections.Generic.List[byte]]::new()
+        $bytes.Add([byte](40*[int]$parts[0]+[int]$parts[1]))
+        for ($i=2;$i -lt $parts.Length;$i++) {
+            $val=[int]$parts[$i]
+            if ($val -lt 128) { $bytes.Add([byte]$val) }
+            else {
+                $tmp=[System.Collections.Generic.List[byte]]::new()
+                while ($val -gt 0) { $tmp.Insert(0,[byte]($val -band 0x7F));$val=$val -shr 7 }
+                for ($j=0;$j -lt $tmp.Count-1;$j++) { $bytes.Add([byte]($tmp[$j] -bor 0x80)) }
+                $bytes.Add($tmp[$tmp.Count-1])
+            }
+        }
+        return $bytes.ToArray()
+    }
+    function Encode-Length($len) {
+        if ($len -lt 128) { return [byte[]]@($len) }
+        elseif ($len -lt 256) { return [byte[]]@(0x81,$len) }
+        else { return [byte[]]@(0x82,($len -shr 8) -band 0xFF,$len -band 0xFF) }
+    }
+    function Wrap-TLV($tag,[byte[]]$content) {
+        return [byte[]](@([byte]$tag)+(Encode-Length $content.Length)+$content)
+    }
+    function Read-TLV-At([byte[]]$buf,[int]$pos) {
+        if ($pos -ge $buf.Length) { return $null }
+        $tag=$buf[$pos];$pos++
+        $lb=$buf[$pos];$pos++
+        if (($lb -band 0x80) -ne 0) {
+            $nb=$lb -band 0x7F;$len=0
+            for ($k=0;$k -lt $nb;$k++){$len=($len -shl 8) -bor $buf[$pos];$pos++}
+        } else { $len=$lb }
+        if ($pos+$len -gt $buf.Length) { return $null }
+        [byte[]]$data=if($len -gt 0){$buf[$pos..($pos+$len-1)]}else{@()}
+        return @{Tag=$tag;Data=$data;Len=$len;NextPos=$pos+$len}
+    }
+    function Bytes-ULong([byte[]]$b){[long]$v=0;foreach($x in $b){$v=($v -shl 8) -bor $x};return $v}
+    function Bytes-Long([byte[]]$b){
+        [long]$v=0;foreach($x in $b){$v=($v -shl 8) -bor $x}
+        if($b.Length -gt 0 -and ($b[0] -band 0x80) -ne 0){$v=$v-([long]1 -shl ($b.Length*8))}
+        return $v
+    }
+    function Parse-SNMP([byte[]]$r) {
+        try {
+            $s=Read-TLV-At $r 0;if($null -eq $s -or $s.Tag -ne 0x30){return $null}
+            [byte[]]$sd=$s.Data;$p=0
+            $v=Read-TLV-At $sd $p;$p=$v.NextPos
+            $c=Read-TLV-At $sd $p;$p=$c.NextPos
+            $pdu=Read-TLV-At $sd $p;if($null -eq $pdu -or $pdu.Tag -ne 0xA2){return $null}
+            [byte[]]$pd=$pdu.Data;$p2=0
+            $ri=Read-TLV-At $pd $p2;$p2=$ri.NextPos
+            $es=Read-TLV-At $pd $p2;$p2=$es.NextPos
+            if($es.Data.Length -gt 0 -and $es.Data[0] -ne 0){return $null}
+            $ei=Read-TLV-At $pd $p2;$p2=$ei.NextPos
+            $vbl=Read-TLV-At $pd $p2;if($null -eq $vbl -or $vbl.Tag -ne 0x30){return $null}
+            [byte[]]$vbld=$vbl.Data
+            $vb=Read-TLV-At $vbld 0;if($null -eq $vb -or $vb.Tag -ne 0x30){return $null}
+            [byte[]]$vbd=$vb.Data;$p4=0
+            $ot=Read-TLV-At $vbd $p4;$p4=$ot.NextPos
+            $vt=Read-TLV-At $vbd $p4;if($null -eq $vt){return $null}
+            switch($vt.Tag){
+                0x02{return Bytes-Long  $vt.Data}
+                0x04{return([System.Text.Encoding]::ASCII.GetString($vt.Data) -replace '[^\x20-\x7E]','').Trim()}
+                0x05{return $null}
+                0x41{return Bytes-ULong $vt.Data}
+                0x42{return Bytes-ULong $vt.Data}
+                0x43{return Bytes-ULong $vt.Data}
+                default{return $null}
+            }
+        } catch {return $null}
+    }
+    function SNMP-Get([string]$IP,[string]$OID) {
+        try {
+            [byte[]]$ob=Encode-OID $OID
+            [byte[]]$ot=Wrap-TLV 0x06 $ob
+            [byte[]]$nt=@(0x05,0x00)
+            [byte[]]$vb=Wrap-TLV 0x30 ($ot+$nt)
+            [byte[]]$vbl=Wrap-TLV 0x30 $vb
+            [byte[]]$ri=@(0x02,0x01,[byte](Get-Random -Min 1 -Max 127))
+            [byte[]]$es=@(0x02,0x01,0x00)
+            [byte[]]$ei=@(0x02,0x01,0x00)
+            [byte[]]$pdu=Wrap-TLV 0xA0 ($ri+$es+$ei+$vbl)
+            [byte[]]$cb=[System.Text.Encoding]::ASCII.GetBytes($Community)
+            [byte[]]$ct=@([byte]0x04)+(Encode-Length $cb.Length)+$cb
+            [byte[]]$vt=@(0x02,0x01,0x01)
+            [byte[]]$msg=Wrap-TLV 0x30 ($vt+$ct+$pdu)
+            $udp=New-Object System.Net.Sockets.UdpClient
+            $udp.Client.ReceiveTimeout=$TimeoutMs
+            $udp.Connect($IP,$Puerto)
+            [void]$udp.Send($msg,$msg.Length)
+            $rem=New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Any,0)
+            [byte[]]$resp=$udp.Receive([ref]$rem)
+            $udp.Close()
+            if($null -eq $resp -or $resp.Length -eq 0){return $null}
+            return Parse-SNMP $resp
+        } catch {return $null}
+    }
+
+    $ips=[System.Collections.Generic.List[hashtable]]::new()
+    try {
+        $puertos=Get-PrinterPort -ErrorAction SilentlyContinue |
+                 Where-Object{$_.PrinterHostAddress -match '^\d+\.\d+\.\d+\.\d+'}
+        foreach($p in $puertos){
+            $nom=(Get-Printer -ErrorAction SilentlyContinue |
+                  Where-Object{$_.PortName -eq $p.Name}|Select-Object -First 1).Name
+            $ips.Add(@{IP=$p.PrinterHostAddress;Nombre=if($nom){$nom}else{$p.Name}})
+        }
+    } catch {}
+    if($ips.Count -eq 0){
+        try {
+            Get-WmiObject Win32_Printer -ErrorAction SilentlyContinue |
+            Where-Object{$_.PortName -match '^\d+\.\d+\.\d+\.\d+'} |
+            ForEach-Object{$ips.Add(@{IP=$_.PortName;Nombre=$_.Name})}
+        } catch {}
+    }
+    $vistas=@{};$unicas=@()
+    foreach($i in $ips){if(-not $vistas[$i.IP]){$vistas[$i.IP]=$true;$unicas+=$i}}
+
+    $resultados=@()
+    foreach($imp in $unicas){
+        $IP=$imp.IP
+        $ping=Test-Connection -ComputerName $IP -Count 1 -Quiet -ErrorAction SilentlyContinue
+        if(-not $ping){continue}
+        $modelo=SNMP-Get $IP $OIDMap.Modelo
+        $serial=SNMP-Get $IP $OIDMap.Serial
+        $total =SNMP-Get $IP $OIDMap.TotalPaginas
+        $bn    =SNMP-Get $IP $OIDMap.ToshBN
+        $color =SNMP-Get $IP $OIDMap.ToshColor
+        $papN  =SNMP-Get $IP $OIDMap.PapelNivel
+        $papM  =SNMP-Get $IP $OIDMap.PapelMax
+        $marca="Desconocida"
+        if($modelo -match "TOSHIBA")        {$marca="Toshiba"}
+        elseif($modelo -match "HP|Hewlett") {$marca="HP"}
+        elseif($modelo -match "XEROX")      {$marca="Xerox"}
+        elseif($modelo -match "EPSON")      {$marca="Epson"}
+        elseif($modelo -match "BROTHER")    {$marca="Brother"}
+        elseif($modelo -match "CANON")      {$marca="Canon"}
+        elseif($modelo -match "RICOH")      {$marca="Ricoh"}
+        elseif($modelo -match "KYOCERA")    {$marca="Kyocera"}
+        $toners=@()
+        foreach($i in 1..4){
+            $n=SNMP-Get $IP $OIDMap["TonerN$i"]
+            $m=SNMP-Get $IP $OIDMap["TonerMax$i"]
+            $c=SNMP-Get $IP $OIDMap["TonerColor$i"]
+            if($null -ne $n -and $null -ne $m -and [long]$m -gt 0){
+                $toners+=@{color=$c;nivel=$n;maximo=$m;pct=[math]::Round(([long]$n/[long]$m)*100,1)}
+            }
+        }
+        $resultados+=@{
+            ip=$IP;nombre_win=$imp.Nombre;marca=$marca;modelo=$modelo
+            serial=$serial;total_paginas=$total;paginas_bn=$bn;paginas_color=$color
+            papel_nivel=$papN;papel_max=$papM;toner=$toners
+            timestamp=(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')
+        }
+    }
+    return $resultados
+}
+
+function Get-TrabajosImpresion {
+    $marcaPath='C:\Xentra\ultima-impresion.txt'
+    try {
+        wevtutil set-log "Microsoft-Windows-PrintService/Operational" /enabled:true 2>$null
+        $desde=$null
+        if(Test-Path $marcaPath){
+            try{$desde=[datetime](Get-Content $marcaPath -Raw).Trim()}catch{}
+        }
+        $eventos=Get-WinEvent -LogName "Microsoft-Windows-PrintService/Operational" -ErrorAction SilentlyContinue |
+                 Where-Object{$_.Id -eq 307}
+        if($null -ne $desde){
+            $eventos=$eventos|Where-Object{$_.TimeCreated -gt $desde}
+        } else {
+            $ayer=(Get-Date).AddHours(-24)
+            $eventos=$eventos|Where-Object{$_.TimeCreated -gt $ayer}
+        }
+        if($null -eq $eventos -or @($eventos).Count -eq 0){return @()}
+        $trabajos=@($eventos)|ForEach-Object{
+            @{
+                fecha    =$_.TimeCreated.ToString('yyyy-MM-ddTHH:mm:ss')
+                usuario  ="$($_.Properties[2].Value)"
+                impresora="$($_.Properties[4].Value)"
+                paginas  =[int]"$($_.Properties[7].Value)"
+                documento="$($_.Properties[1].Value)"
+            }
+        }
+        Set-Content -Path $marcaPath -Value (Get-Date).ToString('o') -Encoding UTF8
+        return $trabajos
+    } catch {return @()}
+}
+
+
+# Reporte SNMP impresoras
+try {
+    $impresoras = Get-InfoImpresoras
+    $trabajos   = Get-TrabajosImpresion
+    if ($impresoras.Count -gt 0 -or $trabajos.Count -gt 0) {
+        $payload = @{
+            serial     = $datos.serial
+            empresa_id = [int]$EmpresaId
+            impresoras = $impresoras
+            trabajos   = $trabajos
+            timestamp  = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')
+        }
+        Enviar-Json '/api/impresora/snmp-reporte' $payload 20
+        Write-Log "SNMP: $($impresoras.Count) impresora(s), $($trabajos.Count) trabajo(s) enviados"
+    } else {
+        Write-Log "SNMP: Sin impresoras de red detectadas"
+    }
+} catch { Write-Log "SNMP Error: $_" }
+
 Write-Log "Ciclo normal OK v$Version (intervalo: ${IntervaloMin}min)"
