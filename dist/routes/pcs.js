@@ -67,10 +67,10 @@ router.post("/api/pc/reportar", async (req, res) => {
         motherboard, bios_version, disco_total_gb, disco_libre_gb, tipo_disco, marca_disco, bus_disco,
         disco_salud, disco_temp, disco_desgaste, cpu_temp,
         version_windows, arquitectura, win_activado, fecha_inst_so, ultimo_update, bitlocker, dominio,
-        office_producto, office_version, antivirus, resolucion, impresora, uptime_horas,
+        office_producto, office_version, antivirus, resolucion, impresora, hojas_impresas_hoy, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
         garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
@@ -86,7 +86,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         win_activado=VALUES(win_activado), fecha_inst_so=VALUES(fecha_inst_so),
         ultimo_update=VALUES(ultimo_update), bitlocker=VALUES(bitlocker), dominio=VALUES(dominio),
         office_producto=VALUES(office_producto), office_version=VALUES(office_version),
-        antivirus=VALUES(antivirus), resolucion=VALUES(resolucion), impresora=VALUES(impresora),
+        antivirus=VALUES(antivirus), resolucion=VALUES(resolucion), impresora=VALUES(impresora), hojas_impresas_hoy=VALUES(hojas_impresas_hoy),
         uptime_horas=VALUES(uptime_horas),
         mb_liberados_ultima=COALESCE(VALUES(mb_liberados_ultima), mb_liberados_ultima),
         ultima_limpieza=COALESCE(VALUES(ultima_limpieza), ultima_limpieza),
@@ -109,7 +109,7 @@ router.post("/api/pc/reportar", async (req, res) => {
             d.version_windows || null, d.arquitectura || null,
             d.win_activado != null ? d.win_activado : null, d.fecha_inst_so || null, d.ultimo_update || null,
             d.bitlocker != null ? d.bitlocker : null, d.dominio || null, d.office_producto || null,
-            d.office_version || null, d.antivirus || null, d.resolucion || null, d.impresora || null,
+            d.office_version || null, d.antivirus || null, d.resolucion || null, d.impresora || null, d.hojas_impresas_hoy || 0,
             d.uptime_horas || null, d.mb_liberados_ultima || null, d.ultima_limpieza || null,
             d.version_agente || null, d.bateria ? JSON.stringify(d.bateria) : null,
             d.garantia_status || null, d.garantia_inicio || null, d.garantia_fin || null,
