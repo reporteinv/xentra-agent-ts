@@ -527,6 +527,36 @@ async function verDetalles(pc_id) {
       </div>
     `;
 
+    // Seccion bateria
+    let batHtml = '';
+    const bat = pc.bateria ? (typeof pc.bateria === 'string' ? JSON.parse(pc.bateria) : pc.bateria) : null;
+    if (bat && pc.tipo_equipo === 'Laptop') {
+      const cargaPct = bat.carga_pct || 0;
+      const colorBarra = cargaPct >= 50 ? '#22c55e' : cargaPct >= 20 ? '#f59e0b' : '#ef4444';
+      const iconCarga = bat.cargando ? '⚡' : '🔌';
+      const deg = bat.degradacion_pct != null ? bat.degradacion_pct + '%' : '—';
+      const colorDeg = bat.degradacion_pct >= 30 ? '#ef4444' : bat.degradacion_pct >= 15 ? '#f59e0b' : '#22c55e';
+      batHtml = `
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+        <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;">🔋 Batería</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div class="det-item"><div class="det-label">Carga</div>
+            <div class="det-val" style="display:flex;align-items:center;gap:6px;">
+              <div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;">
+                <div style="width:${cargaPct}%;height:100%;background:${colorBarra};border-radius:3px;"></div>
+              </div>
+              <span>${cargaPct}%</span> ${iconCarga}
+            </div>
+          </div>
+          <div class="det-item"><div class="det-label">Degradación</div><div class="det-val" style="color:${colorDeg};">${deg}</div></div>
+          <div class="det-item"><div class="det-label">Conectado</div><div class="det-val">${bat.conectado_corriente ? '<span style="color:#22c55e;">Sí</span>' : '<span style="color:#ef4444;">No</span>'}</div></div>
+          <div class="det-item"><div class="det-label">Cap. Actual</div><div class="det-val">${bat.capacidad_actual_mwh ? Math.round(bat.capacidad_actual_mwh/1000) + ' Wh' : '—'}</div></div>
+          <div class="det-item"><div class="det-label">Cap. Diseño</div><div class="det-val">${bat.capacidad_diseno_mwh ? Math.round(bat.capacidad_diseno_mwh/1000) + ' Wh' : '—'}</div></div>
+        </div>
+      </div>`;
+    }
+    document.getElementById('detalleContenido').innerHTML += batHtml;
+
     // Seccion IP lookup
     let ipHtml = '';
     if (pc.ip_lookup_fecha) {

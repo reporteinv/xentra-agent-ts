@@ -54,9 +54,14 @@ export async function lookupYActualizar(pcId: number, serial: string, marca: str
   const esLenovo = (marca && marca.toLowerCase().includes('lenovo')) ||
                    (serial && serial.toUpperCase().startsWith('MJ'));
   if (!esLenovo) {
+    const [rows]: any = await pool.query(
+      `SELECT garantia_status FROM pcs WHERE id = ?`, [pcId]
+    );
+    const yaTieneGarantia = rows[0]?.garantia_status != null;
+    const nuevoStatus = yaTieneGarantia ? 'ok' : 'no_soportado';
     await pool.query(
-      `UPDATE pcs SET lookup_status = 'no_soportado' WHERE id = ?`,
-      [pcId]
+      `UPDATE pcs SET lookup_status = ? WHERE id = ?`,
+      [nuevoStatus, pcId]
     );
     return;
   }
