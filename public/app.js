@@ -462,6 +462,7 @@ async function verDetalles(pc_id) {
       ${di('Antivirus', pc.antivirus)}
       ${di('Bitlocker', pc.bitlocker!=null?(pc.bitlocker?'Activado':'Desactivado'):null)}
       ${di('Impresora', pc.impresora)}
+      ${di('Hojas hoy', pc.hojas_impresas_hoy != null ? pc.hojas_impresas_hoy+' págs' : null)}
       ${di('Uptime', pc.uptime_horas ? pc.uptime_horas+' hrs' : null)}
       ${di('Fecha Inst. SO', fmtF(pc.fecha_inst_so))}
       ${di('Ultimo Update', fmtF(pc.ultimo_update))}
