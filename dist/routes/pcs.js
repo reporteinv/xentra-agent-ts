@@ -209,7 +209,7 @@ router.get("/api/descargar-agente", (req, res) => {
 });
 router.get("/api/pcs/:id", async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT p.*, COALESCE(ma.modelo_display, p.modelo) AS modelo FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.id=?", [req.params.id]);
+        const [rows] = await pool.query("SELECT p.*, COALESCE(ma.modelo_display, p.modelo) AS modelo, COALESCE((SELECT SUM(paginas) FROM snmp_trabajos_impresion WHERE serial_pc = CONVERT(p.serial USING utf8mb4) COLLATE utf8mb4_general_ci AND MONTH(fecha) = MONTH(NOW()) AND YEAR(fecha) = YEAR(NOW())), 0) AS hojas_mes FROM pcs p LEFT JOIN modelo_alias ma ON p.modelo = ma.modelo_original WHERE p.id=?", [req.params.id]);
         if (!rows.length)
             return res.status(404).json({ error: "PC no encontrado" });
         res.json(rows[0]);
