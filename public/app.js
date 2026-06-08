@@ -435,7 +435,8 @@ async function verDetalles(pc_id) {
     const _mons = pc.monitores ? (typeof pc.monitores==='string'?JSON.parse(pc.monitores):pc.monitores) : [];
     const discosHtml = _discos.map(d => { let v=d.total_gb+' GB / '+d.libre_gb+' GB libre'; if(d.marca||d.tipo||d.bus) v+='<br>'+(d.marca||'')+(d.tipo&&d.bus?' ('+d.tipo+' '+d.bus+')':''); if(d.temp) v+='<br>Temp: '+d.temp+'°C'; if(d.horas) v+=' | '+d.horas+'h uso'; return di('Disco '+d.letra,v); }).join('');
     const ramHtml = (Array.isArray(_mods)?_mods:[_mods]).map((m,i)=>di('RAM Slot '+(i+1),m.gb+'GB '+(m.marca||'')+' '+(m.tipo||'')+' '+(m.mhz?m.mhz+'MHz':''))).join('');
-    const monHtml = (Array.isArray(_mons)?_mons:[_mons]).map((m,i)=>di('Monitor '+(i+1),m.resolucion+(m.primario?' (primario)':''))).join('');
+    const _monsArr = Array.isArray(_mons)?_mons:[_mons];
+    const monHtml = _monsArr.length > 0 ? di('Monitores', _monsArr.map((m,i)=>'<div>Monitor '+(i+1)+'&nbsp;&nbsp;'+m.resolucion+'</div>').join('')) : '';
     document.getElementById('detalleContenido').innerHTML = imgHtml + `<div class="detalles-grid">
       ${di('Serial', pc.serial)}
       ${di('Equipo', pc.nombre_equipo)}
@@ -454,13 +455,11 @@ async function verDetalles(pc_id) {
       ${di('BIOS', pc.bios_version)}
       ${discosHtml}
       ${monHtml}
-      ${di('Windows', pc.version_windows)}
-      ${di('Arquitectura', pc.arquitectura)}
-      ${di('Win Activado', pc.win_activado!=null?(pc.win_activado?'Activado':'Desactivado'):null)}
-      ${di('Office', pc.office_producto)}
-      ${di('Version Office', pc.office_version)}
-      ${di('Antivirus', pc.antivirus)}
-      ${di('Bitlocker', pc.bitlocker!=null?(pc.bitlocker?'Activado':'Desactivado'):null)}
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        ${di('Windows', (pc.version_windows||'—')+' &nbsp; '+(pc.win_activado!=null?(pc.win_activado?'Activado':'Desactivado'):'—')+' &nbsp; '+(pc.arquitectura||'—'))}
+        ${di('Office', (pc.office_producto||'—')+'<br><span style="font-size:0.8rem;color:#888">'+(pc.office_version||'—')+'</span>')}
+      </div>
+      ${di('Antivirus', (pc.antivirus||'—')+'<br><span style="font-size:0.8rem;color:#888">Bitlocker: '+(pc.bitlocker!=null?(pc.bitlocker?'Activado':'Desactivado'):'—')+'</span>')}
       ${di('Impresora', pc.impresora)}
       ${di('Hojas mes', pc.hojas_mes != null ? pc.hojas_mes+' págs' : null)}
       ${di('Uptime', pc.uptime_horas ? pc.uptime_horas+' hrs' : null)}
@@ -471,6 +470,45 @@ async function verDetalles(pc_id) {
       ${di('Ultima Limpieza', fmtF(pc.ultima_limpieza))}
       ${di('MB Liberados', pc.mb_liberados_ultima!=null?(pc.mb_liberados_ultima/1024).toFixed(2)+' GB':null)}
     </div>`;
+    // Seccion bateria
+    let batHtml = '';
+    const bat = pc.bateria ? (typeof pc.bateria === 'string' ? JSON.parse(pc.bateria) : pc.bateria) : null;
+    if (bat && pc.tipo_equipo === 'Laptop') {
+      const cargaPct = bat.carga_pct || 0;
+      const colorBarra = cargaPct >= 50 ? '#22c55e' : cargaPct >= 20 ? '#f59e0b' : '#ef4444';
+      const iconCarga = bat.cargando ? '⚡' : '🔌';
+      const deg = bat.degradacion_pct != null ? bat.degradacion_pct + '%' : '—';
+      const colorDeg = bat.degradacion_pct >= 30 ? '#ef4444' : bat.degradacion_pct >= 15 ? '#f59e0b' : '#22c55e';
+      batHtml = `
+      <div style="margin-top:0;padding-top:0;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="det-item">
+            <div class="det-label">Carga</div>
+            <div class="det-val" style="display:flex;align-items:center;gap:6px;">
+              <div style="width:70px;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;">
+                <div style="width:${cargaPct}%;height:100%;background:${colorBarra};border-radius:3px;"></div>
+              </div>
+              <span>${cargaPct}%</span> ${iconCarga}
+            </div>
+            <div style="margin-top:8px;">
+              <span class="det-label">Conectado &nbsp;</span><span class="det-val">${bat.conectado_corriente ? '<span style="color:#22c55e;">Sí</span>' : '<span style="color:#ef4444;">No</span>'}</span>
+            </div>
+          </div>
+          <div class="det-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span class="det-label">Cap. Diseño</span><span class="det-val">${bat.capacidad_diseno_mwh ? Math.round(bat.capacidad_diseno_mwh/1000) + ' Wh' : '—'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span class="det-label">Cap. Actual</span><span class="det-val">${bat.capacidad_actual_mwh ? Math.round(bat.capacidad_actual_mwh/1000) + ' Wh' : '—'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="det-label">Degradación</span><span class="det-val" style="color:${colorDeg};">${deg}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     let garantiaHtml = '';
     if (pc.modelo_oficial || pc.garantia_fin) {
       const gStatus = pc.garantia_status || 'pendiente';
@@ -479,7 +517,7 @@ async function verDetalles(pc_id) {
       const color = colores[gStatus] || '#9ca3af';
       const texto = textos[gStatus] || '⚪ Sin datos';
       garantiaHtml = `
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+        <div style="margin-top:12px;padding-top:12px;">
           <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
             🛡️ Garantía Lenovo
           </div>
@@ -507,11 +545,12 @@ async function verDetalles(pc_id) {
           </table>
         </div>`;
     }
+    document.getElementById('detalleContenido').innerHTML += batHtml;
     document.getElementById('detalleContenido').innerHTML += garantiaHtml;
 
     // Color y Observacion al final
     document.getElementById('detalleContenido').innerHTML += `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+      <div style="margin-top:12px;padding-top:12px;">
         <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px;">Color</label>
         <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
           <span class="pc-dot" data-color="" onclick="seleccionarColorPc(this)" style="width:18px;height:18px;border-radius:50%;background:transparent;border:1px solid #aaa;cursor:pointer;display:inline-block;${!coloresPc[pc.id] ? 'outline:2px solid #3498db;' : ''}"></span>
@@ -528,42 +567,12 @@ async function verDetalles(pc_id) {
       </div>
     `;
 
-    // Seccion bateria
-    let batHtml = '';
-    const bat = pc.bateria ? (typeof pc.bateria === 'string' ? JSON.parse(pc.bateria) : pc.bateria) : null;
-    if (bat && pc.tipo_equipo === 'Laptop') {
-      const cargaPct = bat.carga_pct || 0;
-      const colorBarra = cargaPct >= 50 ? '#22c55e' : cargaPct >= 20 ? '#f59e0b' : '#ef4444';
-      const iconCarga = bat.cargando ? '⚡' : '🔌';
-      const deg = bat.degradacion_pct != null ? bat.degradacion_pct + '%' : '—';
-      const colorDeg = bat.degradacion_pct >= 30 ? '#ef4444' : bat.degradacion_pct >= 15 ? '#f59e0b' : '#22c55e';
-      batHtml = `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
-        <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;">🔋 Batería</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-          <div class="det-item"><div class="det-label">Carga</div>
-            <div class="det-val" style="display:flex;align-items:center;gap:6px;">
-              <div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;">
-                <div style="width:${cargaPct}%;height:100%;background:${colorBarra};border-radius:3px;"></div>
-              </div>
-              <span>${cargaPct}%</span> ${iconCarga}
-            </div>
-          </div>
-          <div class="det-item"><div class="det-label">Degradación</div><div class="det-val" style="color:${colorDeg};">${deg}</div></div>
-          <div class="det-item"><div class="det-label">Conectado</div><div class="det-val">${bat.conectado_corriente ? '<span style="color:#22c55e;">Sí</span>' : '<span style="color:#ef4444;">No</span>'}</div></div>
-          <div class="det-item"><div class="det-label">Cap. Actual</div><div class="det-val">${bat.capacidad_actual_mwh ? Math.round(bat.capacidad_actual_mwh/1000) + ' Wh' : '—'}</div></div>
-          <div class="det-item"><div class="det-label">Cap. Diseño</div><div class="det-val">${bat.capacidad_diseno_mwh ? Math.round(bat.capacidad_diseno_mwh/1000) + ' Wh' : '—'}</div></div>
-        </div>
-      </div>`;
-    }
-    document.getElementById('detalleContenido').innerHTML += batHtml;
-
     // Seccion IP lookup
     let ipHtml = '';
     if (pc.ip_lookup_fecha) {
       if (pc.ip_publica && parseFloat(pc.ip_lat) && parseFloat(pc.ip_lng)) {
         ipHtml = `
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+        <div style="margin-top:12px;padding-top:12px;">
           <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
             🌐 Red — ip.guide
             <span style="margin-left:auto;background:#E6F1FB;color:#185FA5;padding:2px 8px;border-radius:20px;font-size:11px;">Remota</span>
@@ -579,7 +588,7 @@ async function verDetalles(pc_id) {
         </div>`;
       } else if (!pc.ip_publica) {
         ipHtml = `
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+        <div style="margin-top:12px;padding-top:12px;">
           <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:8px;">
             🌐 Red
             <span style="margin-left:8px;background:#E1F5EE;color:#0F6E56;padding:2px 8px;border-radius:20px;font-size:11px;">Corporativa</span>
