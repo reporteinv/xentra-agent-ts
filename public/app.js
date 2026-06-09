@@ -456,7 +456,7 @@ async function verDetalles(pc_id) {
       ${discosHtml}
       ${monHtml}
       <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        ${di('Windows', (pc.version_windows||'—')+' &nbsp; '+(pc.win_activado!=null?(pc.win_activado?'<span style="color:#22c55e">Activado</span>':'<span style="color:#ef4444">No activado</span>'):'—')+' &nbsp; '+(pc.arquitectura||'—')+'<br><span style="font-size:0.8rem;color:#888">Canal: '+(pc.win_canal||'—')+' &nbsp;|&nbsp; Licencia: '+(pc.win_licencia||'—')+' &nbsp;|&nbsp; Clave: '+(pc.win_clave_parcial?'XXXXX-'+pc.win_clave_parcial:'—')+'</span>')}
+        ${di('Windows', (pc.version_windows||'—')+' &nbsp; '+(pc.win_activado!=null?(pc.win_activado?'<span style="color:#22c55e">Activado</span>':'<span style="color:#ef4444">No activado</span>'):'—')+' &nbsp; '+(pc.arquitectura||'—')+'<br><span style="font-size:0.8rem;color:#888">Canal: '+(pc.win_canal||'—')+' &nbsp;|&nbsp; Licencia: '+(pc.win_licencia||'—')+' &nbsp;|&nbsp; Clave: '+(pc.win_clave_parcial?'-'+pc.win_clave_parcial:'—')+'</span>')}
         ${di('Office', (pc.office_producto||'—')+'<br><span style="font-size:0.8rem;color:#888">'+(pc.office_version||'—')+'</span>')}
       </div>
       ${di('Antivirus', (pc.antivirus||'—')+'<br><span style="font-size:0.8rem;color:#888">Bitlocker: '+(pc.bitlocker!=null?(pc.bitlocker?'Activado':'Desactivado'):'—')+'</span>')}
