@@ -151,29 +151,21 @@ function Get-InfoLicenciaWindows {
         win_clave_parcial = $null
     }
     try {
-        $slmgr = cscript.exe //NoLogo "$env:SystemRoot\System32\slmgr.vbs" /dli 2>$null
-        if ($slmgr) {
-            $slmgrStr = $slmgr -join "`n"
+        $lic = Get-CimInstance SoftwareLicensingProduct -Filter "Name like 'Windows%' and LicenseStatus=1" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($lic) {
             # win_activado y win_licencia
-            if ($slmgrStr -match 'License Status:\s*(.+)') {
-                $statusRaw = $Matches[1].Trim()
-                $result.win_licencia = $statusRaw
-                $result.win_activado = ($statusRaw -like '*Licensed*')
-            }
-            # win_canal (License Type)
-            if ($slmgrStr -match 'License Type:\s*(.+)') {
-                $tipoRaw = $Matches[1].Trim()
-                if     ($tipoRaw -like '*OEM*')    { $result.win_canal = 'OEM' }
-                elseif ($tipoRaw -like '*Retail*')  { $result.win_canal = 'RETAIL' }
-                elseif ($tipoRaw -like '*Volume*' -and $tipoRaw -like '*KMS*') { $result.win_canal = 'KMS' }
-                elseif ($tipoRaw -like '*Volume*' -and $tipoRaw -like '*MAK*') { $result.win_canal = 'MAK' }
-                elseif ($tipoRaw -like '*Volume*')  { $result.win_canal = 'VOLUME' }
-                else                                { $result.win_canal = $tipoRaw }
-            }
-            # win_clave_parcial (Partial Product Key)
-            if ($slmgrStr -match 'Partial Product Key:\s*([A-Z0-9]{5})') {
-                $result.win_clave_parcial = $Matches[1].Trim()
-            }
+            $result.win_activado = ($lic.LicenseStatus -eq 1)
+            $result.win_licencia = if ($lic.LicenseStatus -eq 1) { 'Licensed' } else { 'Unlicensed' }
+            # win_canal desde ProductKeyChannel (OEM:DM, OEM:NONSLP, Retail, Volume:KMS, Volume:MAK)
+            $ch = if ($lic.ProductKeyChannel) { $lic.ProductKeyChannel } else { $lic.Description }
+            if     ($ch -like '*OEM*')    { $result.win_canal = 'OEM' }
+            elseif ($ch -like '*Retail*') { $result.win_canal = 'RETAIL' }
+            elseif ($ch -like '*KMS*')    { $result.win_canal = 'KMS' }
+            elseif ($ch -like '*MAK*')    { $result.win_canal = 'MAK' }
+            elseif ($ch -like '*Volume*') { $result.win_canal = 'VOLUME' }
+            else                          { $result.win_canal = $ch }
+            # win_clave_parcial
+            if ($lic.PartialProductKey) { $result.win_clave_parcial = $lic.PartialProductKey }
         }
     } catch {}
     # Fallback win_activado via CimInstance si slmgr no respondio
