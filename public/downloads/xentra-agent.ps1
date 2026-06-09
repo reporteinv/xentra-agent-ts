@@ -143,11 +143,47 @@ function Get-InfoOffice {
     return @{ producto=$null; version=$null }
 }
 
-function Get-WinActivado {
+function Get-InfoLicenciaWindows {
+    $result = @{
+        win_activado      = $false
+        win_licencia      = $null
+        win_canal         = $null
+        win_clave_parcial = $null
+    }
     try {
-        $lic = Get-CimInstance SoftwareLicensingProduct -Filter "Name like 'Windows%' and LicenseStatus=1" -ErrorAction SilentlyContinue
-        return [bool]$lic
-    } catch { return $false }
+        $slmgr = cscript.exe //NoLogo "$env:SystemRoot\System32\slmgr.vbs" /dli 2>$null
+        if ($slmgr) {
+            $slmgrStr = $slmgr -join "`n"
+            # win_activado y win_licencia
+            if ($slmgrStr -match 'License Status:\s*(.+)') {
+                $statusRaw = $Matches[1].Trim()
+                $result.win_licencia = $statusRaw
+                $result.win_activado = ($statusRaw -like '*Licensed*')
+            }
+            # win_canal (License Type)
+            if ($slmgrStr -match 'License Type:\s*(.+)') {
+                $tipoRaw = $Matches[1].Trim()
+                if     ($tipoRaw -like '*OEM*')    { $result.win_canal = 'OEM' }
+                elseif ($tipoRaw -like '*Retail*')  { $result.win_canal = 'RETAIL' }
+                elseif ($tipoRaw -like '*Volume*' -and $tipoRaw -like '*KMS*') { $result.win_canal = 'KMS' }
+                elseif ($tipoRaw -like '*Volume*' -and $tipoRaw -like '*MAK*') { $result.win_canal = 'MAK' }
+                elseif ($tipoRaw -like '*Volume*')  { $result.win_canal = 'VOLUME' }
+                else                                { $result.win_canal = $tipoRaw }
+            }
+            # win_clave_parcial (Partial Product Key)
+            if ($slmgrStr -match 'Partial Product Key:\s*([A-Z0-9]{5})') {
+                $result.win_clave_parcial = $Matches[1].Trim()
+            }
+        }
+    } catch {}
+    # Fallback win_activado via CimInstance si slmgr no respondio
+    if (-not $result.win_licencia) {
+        try {
+            $lic = Get-CimInstance SoftwareLicensingProduct -Filter "Name like 'Windows%' and LicenseStatus=1" -ErrorAction SilentlyContinue
+            $result.win_activado = [bool]$lic
+        } catch {}
+    }
+    return $result
 }
 
 function Get-InfoDiscoC {
@@ -363,6 +399,7 @@ function Recolectar-Datos {
         $infoD   = Get-InfoDiscoC
         $infoO   = Get-InfoOffice
         $infoHP  = Get-HPGarantia
+        $infoLic = Get-InfoLicenciaWindows
         $disco   = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $bb      = Get-CimInstance Win32_BaseBoard
         $bios    = Get-CimInstance Win32_BIOS
@@ -415,7 +452,10 @@ function Recolectar-Datos {
             cpu_temp        = Get-CpuTemp
             version_windows = $verWin
             arquitectura    = $os.OSArchitecture
-            win_activado    = Get-WinActivado
+            win_activado    = $infoLic.win_activado
+            win_licencia    = $infoLic.win_licencia
+            win_canal       = $infoLic.win_canal
+            win_clave_parcial = $infoLic.win_clave_parcial
             fecha_inst_so   = $os.InstallDate.ToString('yyyy-MM-dd')
             ultimo_update   = $upd
             bitlocker       = $bl
@@ -670,7 +710,8 @@ function Get-HashInventario {
         $datos.gpu, $datos.motherboard, $datos.bios_version,
         $datos.dominio, $datos.win_activado,
         $datos.garantia_status, $datos.garantia_fin,
-        $datos.tipo_equipo, $datos.mac, $datos.ip_tipo
+        $datos.tipo_equipo, $datos.mac, $datos.ip_tipo,
+        $datos.win_canal, $datos.win_licencia, $datos.win_clave_parcial
     )
     $str = ($campos | ForEach-Object { if ($_ -ne $null) { $_.ToString() } else { '' } }) -join '|'
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($str)

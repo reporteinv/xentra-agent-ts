@@ -66,11 +66,11 @@ router.post("/api/pc/reportar", async (req, res) => {
         tipo_red, adaptador_red, velocidad_red, ram_gb, ram_libre_gb, marca_ram, procesador, gpu,
         motherboard, bios_version, disco_total_gb, disco_libre_gb, tipo_disco, marca_disco, bus_disco,
         disco_salud, disco_temp, disco_desgaste, cpu_temp,
-        version_windows, arquitectura, win_activado, fecha_inst_so, ultimo_update, bitlocker, dominio,
+        version_windows, arquitectura, win_activado, win_licencia, win_canal, win_clave_parcial, fecha_inst_so, ultimo_update, bitlocker, dominio,
         office_producto, office_version, antivirus, resolucion, impresora, hojas_impresas_hoy, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
         garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
@@ -83,7 +83,7 @@ router.post("/api/pc/reportar", async (req, res) => {
         marca_disco=VALUES(marca_disco), bus_disco=VALUES(bus_disco),
         disco_salud=VALUES(disco_salud), disco_temp=VALUES(disco_temp), disco_desgaste=VALUES(disco_desgaste), cpu_temp=VALUES(cpu_temp),
         version_windows=VALUES(version_windows), arquitectura=VALUES(arquitectura),
-        win_activado=VALUES(win_activado), fecha_inst_so=VALUES(fecha_inst_so),
+        win_activado=VALUES(win_activado), win_licencia=VALUES(win_licencia), win_canal=VALUES(win_canal), win_clave_parcial=VALUES(win_clave_parcial), fecha_inst_so=VALUES(fecha_inst_so),
         ultimo_update=VALUES(ultimo_update), bitlocker=VALUES(bitlocker), dominio=VALUES(dominio),
         office_producto=VALUES(office_producto), office_version=VALUES(office_version),
         antivirus=VALUES(antivirus), resolucion=VALUES(resolucion), impresora=VALUES(impresora), hojas_impresas_hoy=VALUES(hojas_impresas_hoy),
@@ -107,7 +107,7 @@ router.post("/api/pc/reportar", async (req, res) => {
             d.bus_disco || null, d.disco_salud || null, d.disco_temp != null ? d.disco_temp : null,
             d.disco_desgaste != null ? d.disco_desgaste : null, d.cpu_temp != null ? d.cpu_temp : null,
             d.version_windows || null, d.arquitectura || null,
-            d.win_activado != null ? d.win_activado : null, d.fecha_inst_so || null, d.ultimo_update || null,
+            d.win_activado != null ? d.win_activado : null, d.win_licencia || null, d.win_canal || null, d.win_clave_parcial || null, d.fecha_inst_so || null, d.ultimo_update || null,
             d.bitlocker != null ? d.bitlocker : null, d.dominio || null, d.office_producto || null,
             d.office_version || null, d.antivirus || null, d.resolucion || null, d.impresora || null, d.hojas_impresas_hoy || 0,
             d.uptime_horas || null, d.mb_liberados_ultima || null, d.ultima_limpieza || null,
