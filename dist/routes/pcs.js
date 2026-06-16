@@ -69,8 +69,9 @@ router.post("/api/pc/reportar", async (req, res) => {
         version_windows, arquitectura, win_activado, win_licencia, win_canal, win_clave_parcial, fecha_inst_so, ultimo_update, bitlocker, dominio,
         office_producto, office_version, antivirus, resolucion, impresora, hojas_impresas_hoy, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
-        garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+        garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos,
+        fabricante_cpu, tiene_npu, npu_nombre, es_ai_ready, tiene_tpm, tpm_version, secure_boot, tiene_vpro, ultimo_reporte)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
@@ -97,6 +98,9 @@ router.post("/api/pc/reportar", async (req, res) => {
         discos=COALESCE(VALUES(discos), discos),
         monitores=COALESCE(VALUES(monitores), monitores),
         ram_modulos=COALESCE(VALUES(ram_modulos), ram_modulos),
+        fabricante_cpu=VALUES(fabricante_cpu), tiene_npu=VALUES(tiene_npu), npu_nombre=VALUES(npu_nombre),
+        es_ai_ready=VALUES(es_ai_ready), tiene_tpm=VALUES(tiene_tpm), tpm_version=VALUES(tpm_version),
+        secure_boot=VALUES(secure_boot), tiene_vpro=VALUES(tiene_vpro),
         activo=1, ultimo_reporte=NOW()
     `, [
             d.empresa_id, d.serial, d.nombre_equipo || null, d.modelo || null, d.tipo_equipo || null,
@@ -115,7 +119,10 @@ router.post("/api/pc/reportar", async (req, res) => {
             d.garantia_status || null, d.garantia_inicio || null, d.garantia_fin || null,
             d.discos ? JSON.stringify(d.discos) : null,
             d.monitores ? JSON.stringify(d.monitores) : null,
-            d.ram_modulos ? JSON.stringify(d.ram_modulos) : null
+            d.ram_modulos ? JSON.stringify(d.ram_modulos) : null,
+            d.fabricante_cpu || null, d.tiene_npu != null ? d.tiene_npu : null, d.npu_nombre || null,
+            d.es_ai_ready != null ? d.es_ai_ready : null, d.tiene_tpm != null ? d.tiene_tpm : null,
+            d.tpm_version || null, d.secure_boot != null ? d.secure_boot : null, d.tiene_vpro != null ? d.tiene_vpro : null
         ]);
         const [pcRows] = await pool.query('SELECT id FROM pcs WHERE serial=?', [d.serial]);
         const pcId = pcRows[0]?.id;

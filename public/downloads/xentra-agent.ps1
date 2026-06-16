@@ -32,7 +32,7 @@ $ArchivoIntervalo = 'C:\Xentra\intervalo.txt'
 $ArchivoHash      = 'C:\Xentra\ultimo-hash.txt'
 $BufferCSV        = 'C:\Xentra\buffer-offline.csv'
 $MaxReintentos    = 5
-$Version          = '3.9'
+$Version          = '4.0'
 
 $IntervaloMin = 20
 if (Test-Path $ArchivoIntervalo) {
@@ -413,6 +413,42 @@ function Recolectar-Datos {
         $ip    = if ($ipObj) { $ipObj.IPAddress } else { $null }
         $ipTipo = if ($ipObj) { if ($ipObj.PrefixOrigin -eq 'Manual') { 'Estatica' } else { 'DHCP' } } else { $null }
         $ram_marca = ((Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1).Manufacturer)
+
+        # ─── AI PC Detection ───────────────────────────────────────────────
+        $cpu_nombre    = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name.Trim()
+        $fabricante_cpu = if ($cpu_nombre -match "Intel") { "Intel" } elseif ($cpu_nombre -match "AMD") { "AMD" } else { "Otro" }
+        $es_ai_ready   = if ($cpu_nombre -match "Ultra|Ryzen AI|7040|8040|9000|Core 7 3\d{2}|Core 5 3\d{2}") { $true } else { $false }
+
+        $npu_info  = $null
+        $tiene_npu = $false
+        $npu_nombre = $null
+        try {
+            $npu_info = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
+                        Where-Object { $_.Name -match "NPU|Neural Processing|Ryzen AI|Intel AI Boost|VPU|Movidius" -and $_.Name -notmatch "Input|Mouse|Keyboard|HID|Touch|Camera" } |
+                        Select-Object -First 1
+            if ($npu_info) { $tiene_npu = $true; $npu_nombre = $npu_info.Name }
+        } catch {}
+
+        $tiene_tpm   = $false
+        $tpm_version = $null
+        try {
+            $tpm_info = Get-CimInstance -Namespace "root\cimv2\security\microsofttpm" -ClassName Win32_Tpm -ErrorAction SilentlyContinue
+            if ($tpm_info) {
+                $tiene_tpm   = [bool]$tpm_info.IsActivated_InitialValue
+                $tpm_version = ($tpm_info.SpecVersion -split ",")[0].Trim()
+            }
+        } catch {}
+
+        $secure_boot = $false
+        try { $secure_boot = [bool](Confirm-SecureBootUEFI -ErrorAction SilentlyContinue) } catch {}
+
+        $tiene_vpro = $false
+        try {
+            $amt = Get-CimInstance -Namespace "root\Intel_ME" -ClassName * -ErrorAction SilentlyContinue
+            if ($amt) { $tiene_vpro = $true }
+        } catch {}
+        # ───────────────────────────────────────────────────────────────────
+
         return @{
             empresa_id      = [int]$EmpresaId
             serial          = $serial
@@ -475,6 +511,14 @@ function Recolectar-Datos {
             discos          = Get-InfoDiscos
             monitores       = Get-InfoMonitores
             ram_modulos     = Get-InfoRam
+            fabricante_cpu  = $fabricante_cpu
+            es_ai_ready     = $es_ai_ready
+            tiene_npu       = $tiene_npu
+            npu_nombre      = $npu_nombre
+            tiene_tpm       = $tiene_tpm
+            tpm_version     = $tpm_version
+            secure_boot     = $secure_boot
+            tiene_vpro      = $tiene_vpro
         }
     } catch { Write-Log "ERROR recolectando datos: $_"; return $null }
 }

@@ -24,7 +24,46 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 const PORT = process.env.PORT || 3001;
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "https://cdn.jsdelivr.net",
+                "https://cdnjs.cloudflare.com",
+            ],
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://cdnjs.cloudflare.com",
+            ],
+            fontSrc: [
+                "'self'",
+                "https://cdnjs.cloudflare.com",
+                "data:",
+            ],
+            imgSrc: [
+                "'self'",
+                "data:",
+                "blob:",
+                "https://*.tile.openstreetmap.org",
+            ],
+            connectSrc: [
+                "'self'",
+                "https://ag2.xentrasoft.com",
+                "https://cdn.jsdelivr.net",
+                "https://cdnjs.cloudflare.com",
+                "https://*.tile.openstreetmap.org",
+            ],
+            scriptSrcAttr: ["'unsafe-inline'", "'unsafe-hashes'"],
+            objectSrc: ["'none'"],
+            frameSrc: ["'none'"],
+        },
+    },
+}));
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({

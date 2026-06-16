@@ -16,7 +16,7 @@ cd /d "%SRCDIR%"
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.9
+echo                SETUP v4.0
 echo  ========================================
 echo.
 echo   1. Instalar
@@ -48,7 +48,7 @@ goto :eof
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.9
+echo                SETUP v4.0
 echo  ========================================
 echo.
 echo  [0/5] Limpiando instalacion previa...
@@ -95,7 +95,7 @@ echo  [5/5] Listo.
 echo.
 echo  ========================================
 echo   === Instalacion EXITOSA ===
-echo   Agente:   v3.9
+echo   Agente:   v4.0
 echo   Polling:  cada 20 min
 echo   Limpieza: diaria %HORA_ST%
 echo  ========================================
@@ -107,7 +107,7 @@ goto salir
 cls
 echo.
 echo  ========================================
-echo                SETUP v3.9
+echo                SETUP v4.0
 echo  ========================================
 echo.
 echo  [1/5] Copiando agente...
@@ -141,7 +141,7 @@ echo  [5/5] Listo.
 echo.
 echo  ========================================
 echo   === Actualizacion EXITOSA ===
-echo   Agente:   v3.9
+echo   Agente:   v4.0
 echo   Polling:  cada 20 min
 echo   Limpieza: diaria %HORA_ST%
 echo  ========================================
