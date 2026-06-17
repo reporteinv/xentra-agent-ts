@@ -113,6 +113,8 @@ function requireAuth(req, res, next) {
         return next();
     if (req.path.startsWith("/api/public/"))
         return next();
+    if (req.path.startsWith("/downloads/"))
+        return next();
     if (req.path.startsWith("/api/pc/"))
         return next();
     if (!req.session.autenticado) {

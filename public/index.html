@@ -834,5 +834,146 @@
     setInterval(pollPCs, 15000);
     pollPCs();
   </script>
+  <!-- Modal Comandos Remotos AG2 -->
+  <div id="modalComandosAg2" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg,#1e2a3a);border-radius:12px;padding:24px;min-width:420px;max-width:600px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0;color:#5dade2;"><i class="fas fa-terminal"></i> Comandos remotos</h3>
+          <div id="ag2CmdSub" style="font-size:0.85rem;color:#aaa;margin-top:2px;"></div>
+        </div>
+        <button onclick="cerrarModalComandosAg2()" style="background:none;border:none;color:#aaa;font-size:1.2rem;cursor:pointer;">&#x2715;</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('limpiar')">🧹 Limpiar disco</button>
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('inventario_ahora')">📋 Inventario ya</button>
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('actualizar_agente')">🔄 Actualizar agente</button>
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('get_logs')">📄 Ver Logs</button>
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('get_processes')">⚙️ Procesos</button>
+        <button class="btn-cmd-ag2" onclick="pedirIntervalo()">⏱️ Cambiar intervalo</button>
+        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('cerrar_sesion')">🚪 Cerrar sesión</button>
+        <button class="btn-cmd-ag2" style="background:#c0392b;" onclick="enviarComandoAg2('reiniciar')">🔁 Reiniciar</button>
+      </div>
+      <pre id="ag2CmdOutput" style="background:#0d1117;color:#58d68d;padding:12px;border-radius:8px;min-height:60px;max-height:300px;overflow-y:auto;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;margin:0;">—</pre>
+      <div style="margin-top:12px;text-align:right;">
+        <button onclick="cerrarModalComandosAg2()" style="padding:6px 16px;border-radius:6px;border:1px solid #5dade2;background:none;color:#5dade2;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .btn-cmd-ag2 {
+      padding: 10px 8px;
+      border-radius: 8px;
+      border: 1px solid #3a4a5a;
+      background: #243447;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .btn-cmd-ag2:hover { background: #2e4057; }
+  </style>
+
+  <script>
+    let _ag2PcActual = null;
+
+    function abrirComandosAg2(pcId, nombre) {
+      _ag2PcActual = pcId;
+      document.getElementById('ag2CmdSub').textContent = nombre || '';
+      document.getElementById('ag2CmdOutput').textContent = '—';
+      document.getElementById('modalComandosAg2').style.display = 'flex';
+    }
+
+    function cerrarModalComandosAg2() {
+      document.getElementById('modalComandosAg2').style.display = 'none';
+    }
+
+    function pedirIntervalo() {
+      const min = prompt('Nuevo intervalo en minutos (ej: 20):');
+      if (!min || isNaN(min) || parseInt(min) < 1) return;
+      enviarComandoAg2('cambiar_intervalo', { minutos: parseInt(min) });
+    }
+
+    async function enviarComandoAg2(comando, params) {
+      if (!_ag2PcActual) return;
+      const confirmados = ['reiniciar', 'cerrar_sesion'];
+      if (confirmados.includes(comando) && !confirm('¿Ejecutar ' + comando + ' en este PC?')) return;
+      const out = document.getElementById('ag2CmdOutput');
+      out.textContent = '⏳ Enviando comando...';
+      try {
+        const r = await fetch('/api/comandos/crear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pc_id: _ag2PcActual, comando, params: params || null })
+        });
+        const data = await r.json();
+        if (!data.ok) { out.textContent = '❌ Error: ' + (data.error || 'desconocido'); return; }
+        out.textContent = '⏳ Esperando respuesta del PC...';
+        const cmdId = data.id;
+        if (!cmdId) return;
+        let intentos = 0;
+        const poll = setInterval(async () => {
+          intentos++;
+          try {
+            const rs = await fetch('/api/comandos/estado/' + cmdId);
+            const st = await rs.json();
+            if (st && st.estado && st.estado !== 'pendiente' && st.estado !== 'ejecutando') {
+              clearInterval(poll);
+              const color = st.estado === 'completado' ? '#58d68d' : '#e74c3c';
+              out.style.color = color;
+              out.textContent = '[' + st.estado.toUpperCase() + ']\n' + (st.output || '—');
+            } else if (intentos >= 60) {
+              clearInterval(poll);
+              out.textContent = '⏱️ Timeout — el PC no respondió en 5 min';
+            }
+          } catch(e) {}
+        }, 5000);
+      } catch(e) {
+        out.textContent = '❌ Error: ' + e.message;
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') cerrarModalComandosAg2();
+    });
+  </script>
+
+
+  <script>
+    // Patch: agregar botón Comandos al config-menu de cada PC
+    window._patchMenuComandos = function() {
+      document.querySelectorAll('.config-menu').forEach(function(menu) {
+        if (menu.querySelector('.btn-comandos-ag2')) return;
+        var header = menu.querySelector('.cmenu-header');
+        if (!header) return;
+        var nombre = header.textContent.replace('⚙️ ', '').trim();
+        var tr = menu.closest('tr');
+        if (!tr) return;
+        var idMatch = tr.innerHTML.match(/verDetalles\((\d+)\)/);
+        if (!idMatch) return;
+        var id = idMatch[1];
+        var a = document.createElement('a');
+        a.href = '#';
+        a.className = 'cmenu-item btn-comandos-ag2';
+        a.innerHTML = '💻 Comandos';
+        a.onclick = function(e) {
+          e.preventDefault();
+          abrirComandosAg2(parseInt(id), nombre);
+          if (typeof cerrarConfigs === 'function') cerrarConfigs();
+        };
+        menu.appendChild(a);
+      });
+    };
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('btn-config') || 
+          e.target.closest('.btn-config')) {
+        setTimeout(window._patchMenuComandos, 100);
+        setTimeout(window._patchMenuComandos, 300);
+      }
+    });
+    // También parchear al abrir cualquier menú
+    setInterval(window._patchMenuComandos, 2000);
+  </script>
 </body>
 </html>

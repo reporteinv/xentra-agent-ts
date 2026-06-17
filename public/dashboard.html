@@ -296,16 +296,12 @@
 
     <script>
       // Patch: agregar botón Comandos al config-menu de cada PC
-      const _origRenderTabla = window.renderTabla;
       function _patchMenuComandos() {
         document.querySelectorAll('.config-menu').forEach(menu => {
           if (menu.querySelector('.btn-comandos-ag2')) return;
           const header = menu.querySelector('.cmenu-header');
           if (!header) return;
-          const pcId = menu.closest('tr')?.dataset?.id || 
-                       menu.closest('[data-id]')?.dataset?.id;
           const nombre = header.textContent.replace('⚙️ ','').trim();
-          // buscar el pc_id del tr padre
           const tr = menu.closest('tr');
           if (!tr) return;
           const idMatch = tr.innerHTML.match(/verDetalles\((\d+)\)/);
@@ -319,9 +315,19 @@
           menu.appendChild(a);
         });
       }
-      const _tablaObs = new MutationObserver(_patchMenuComandos);
-      const _tabla = document.getElementById('tablaPcs');
-      if (_tabla) _tablaObs.observe(_tabla, { childList: true, subtree: true });
+      // Observar cambios en la tabla
+      document.addEventListener('DOMContentLoaded', () => {
+        const tabla = document.getElementById('tablaPcs');
+        if (tabla) {
+          new MutationObserver(_patchMenuComandos).observe(tabla, { childList: true, subtree: true });
+        }
+      });
+      // Fallback: también parchear cuando se abre el menú
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-config')) {
+          setTimeout(_patchMenuComandos, 50);
+        }
+      });
     </script>
 
 </body>

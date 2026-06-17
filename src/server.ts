@@ -106,6 +106,7 @@ function requireAuth(
   if (req.path === "/favicon.ico") return next();
   if (req.path.startsWith("/assets/")) return next();
   if (req.path.startsWith("/api/public/")) return next();
+  if (req.path.startsWith("/downloads/")) return next();
   if (req.path.startsWith("/api/pc/")) return next();
   if (!(req.session as any).autenticado) {
     if (req.path.startsWith("/api/"))
