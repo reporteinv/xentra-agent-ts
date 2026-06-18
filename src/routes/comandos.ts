@@ -76,4 +76,19 @@ router.get("/api/comandos/estado/:id", async (req: Request, res: Response) => {
   }
 });
 
+
+// Último comando ejecutado por PC
+router.get("/api/comandos/ultimo/:pcId", async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT id, comando, estado, output, ejecutado FROM pcs_comandos WHERE pc_id=? ORDER BY creado DESC LIMIT 1",
+      [req.params.pcId]
+    );
+    if (!(rows as any[]).length) return res.json(null);
+    res.json((rows as any[])[0]);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export = router;

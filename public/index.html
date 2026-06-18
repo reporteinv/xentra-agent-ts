@@ -892,6 +892,21 @@
       document.getElementById('ag2CmdSub').textContent = nombre || '';
       document.getElementById('ag2CmdOutput').textContent = '—';
       document.getElementById('modalComandosAg2').style.display = 'flex';
+      // Cargar último comando del PC
+      fetch('/api/comandos/ultimo/' + pcId).then(r => r.json()).then(st => {
+        if (!st || !st.id) return;
+        const out = document.getElementById('ag2CmdOutput');
+        if (st.estado === 'completado') {
+          out.style.color = '#58d68d';
+          out.textContent = '[COMPLETADO] ' + (st.output || '—') + '\n' + (st.ejecutado ? '🕒 ' + new Date(st.ejecutado).toLocaleString('es-CO') : '');
+        } else if (st.estado === 'pendiente' || st.estado === 'ejecutando') {
+          out.style.color = '#f39c12';
+          out.textContent = '⏳ Comando pendiente: ' + st.comando;
+        } else if (st.estado === 'error') {
+          out.style.color = '#e74c3c';
+          out.textContent = '[ERROR] ' + (st.output || '—');
+        }
+      }).catch(() => {});
     }
 
     function cerrarModalComandosAg2() {

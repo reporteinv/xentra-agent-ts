@@ -32,7 +32,7 @@ $ArchivoIntervalo = 'C:\Xentra\intervalo.txt'
 $ArchivoHash      = 'C:\Xentra\ultimo-hash.txt'
 $BufferCSV        = 'C:\Xentra\buffer-offline.csv'
 $MaxReintentos    = 5
-$Version          = '4.0'
+$Version          = '4.1'
 
 $IntervaloMin = 20
 if (Test-Path $ArchivoIntervalo) {
@@ -579,6 +579,24 @@ function Actualizar-Agente {
             $nuevaVer = (Select-String -Path 'C:\Xentra\xentra-agent.ps1' -Pattern "Version\s*=\s*'([^']+)'").Matches[0].Groups[1].Value
             $fecha = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             Write-Log "Agente actualizado a v$nuevaVer"
+            # Actualizar exe Go si existe
+            $goExe = 'C:\Xentra\xentra-agent.exe'
+            if (Test-Path $goExe) {
+                try {
+                    Write-Log "Actualizando agente Go..."
+                    $goUrl = "$ServidorPrincipal/downloads/xentra-agent.exe"
+                    $goTmp = 'C:\Xentra\xentra-agent-new.exe'
+                    Invoke-WebRequest -Uri $goUrl -OutFile $goTmp -UseBasicParsing -TimeoutSec 30
+                    if (Test-Path $goTmp) {
+                        Stop-Process -Name "xentra-agent" -Force -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 2
+                        Copy-Item $goTmp $goExe -Force
+                        Remove-Item $goTmp -Force -ErrorAction SilentlyContinue
+                        Start-Process $goExe -ArgumentList '--instalar' -Wait -NoNewWindow
+                        Write-Log "Agente Go actualizado y tareas reinstaladas"
+                    }
+                } catch { Write-Log "Error actualizando Go: $_" }
+            }
             return "Actualizado OK - v$nuevaVer ($fecha)"
         }
         return "Error: respuesta invalida"
@@ -688,6 +706,12 @@ function Verificar-Tareas {
         Start-Process schtasks -ArgumentList @('/Create','/TN','XentraAgentLimpieza','/TR','powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Xentra\xentra-agent.ps1 -Limpiar','/SC','DAILY','/ST',$hST,'/RU','SYSTEM','/RL','HIGHEST','/F') -Wait -NoNewWindow
     }
     $t3 = schtasks /Query /TN "XentraAgentPoll" /FO LIST 2>$null
+    $t3apuntaGo = $t3 -match "xentra-agent\.exe"
+    if ($t3apuntaGo) {
+        Write-Log "XentraAgentPoll apunta al Go — corrigiendo a PS1..."
+        schtasks /Delete /TN "XentraAgentPoll" /F 2>$null
+        $t3 = $null
+    }
     if (-not $t3) {
         Write-Log "Recreando tarea XentraAgentPoll..."
         schtasks /Delete /TN "XentraAgentPoll" /F 2>$null
@@ -1171,4 +1195,49 @@ try {
     }
 } catch { Write-Log "SNMP Error: $_" }
 
+# Auto-actualizar exe Go si hay version nueva
+try {
+    $goExe = 'C:\Xentra\xentra-agent.exe'
+    if (Test-Path $goExe) {
+        $verResp = Invoke-ConFailover '/api/version' 'Get' $null $null 10
+        if ($verResp -and $verResp.version) {
+            $verActiva = $verResp.version
+            $verLocal = & $goExe --version 2>$null
+            if (-not $verLocal) {
+                # Obtener version del exe via strings (buscar patron X.X)
+                $verLocal = (Select-String -Path $goExe -Pattern '\d+\.\d+' -List).Matches[0].Value
+            }
+            if ($verActiva -and $verLocal -and $verActiva -ne $verLocal) {
+                Write-Log "Go: actualizando $verLocal -> $verActiva"
+                $goTmp = 'C:\Xentra\xentra-agent-new.exe'
+                Invoke-WebRequest -Uri "$ServidorPrincipal/downloads/xentra-agent.exe" -OutFile $goTmp -UseBasicParsing -TimeoutSec 60
+                if ((Test-Path $goTmp) -and (Get-Item $goTmp).Length -gt 1MB) {
+                    Stop-Process -Name "xentra-agent" -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 2
+                    Copy-Item $goTmp $goExe -Force
+                    Remove-Item $goTmp -Force -ErrorAction SilentlyContinue
+                    Start-Process $goExe -ArgumentList '--instalar' -Wait -NoNewWindow
+                    Write-Log "Go actualizado a $verActiva y tareas reinstaladas"
+                }
+            }
+        }
+    }
+} catch { Write-Log "Auto-update Go: $_" }
+# Auto-actualizar PS1 si hay version nueva
+try {
+    $serialActual = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
+    $nv = Invoke-ConFailover "/api/pc/agente/ps1?serial=$serialActual" 'Get' $null $null 15
+    if ($nv -and $nv.Length -gt 100) {
+        $verNueva = (Select-String -InputObject $nv -Pattern "Version\s*=\s*'([^']+)'").Matches[0].Groups[1].Value
+        if ($verNueva -and $verNueva -ne $Version) {
+            Write-Log "PS1: actualizando $Version -> $verNueva"
+            $nv = $nv -replace '26', $EmpresaId
+            $tmp = 'C:\Xentra\xentra-agent-nuevo.ps1'
+            Set-Content -Path $tmp -Value $nv -Encoding UTF8
+            Copy-Item $tmp 'C:\Xentra\xentra-agent.ps1' -Force
+            Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+            Write-Log "PS1 actualizado a v$verNueva"
+        }
+    }
+} catch { Write-Log "Auto-update PS1: $_" }
 Write-Log "Ciclo normal OK v$Version (intervalo: ${IntervaloMin}min)"

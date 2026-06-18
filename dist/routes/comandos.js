@@ -68,4 +68,16 @@ router.get("/api/comandos/estado/:id", async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+// Último comando ejecutado por PC
+router.get("/api/comandos/ultimo/:pcId", async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT id, comando, estado, output, ejecutado FROM pcs_comandos WHERE pc_id=? ORDER BY creado DESC LIMIT 1", [req.params.pcId]);
+        if (!rows.length)
+            return res.json(null);
+        res.json(rows[0]);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 module.exports = router;
