@@ -117,6 +117,10 @@ function requireAuth(req, res, next) {
         return next();
     if (req.path.startsWith("/api/pc/"))
         return next();
+    if (req.path.startsWith("/api/version"))
+        return next();
+    if (req.path.startsWith("/api/update/"))
+        return next();
     if (!req.session.autenticado) {
         if (req.path.startsWith("/api/"))
             return res.status(401).json({ error: "No autenticado" });
@@ -158,6 +162,7 @@ const limpiezaRouter = require("./routes/limpieza");
 const comandosRouter = require("./routes/comandos");
 const agenteRouter = require("./routes/agente");
 const licencias_1 = __importDefault(require("./routes/licencias"));
+const updates_1 = __importDefault(require("./routes/updates"));
 const software_1 = __importDefault(require("./routes/software"));
 const impresoras_1 = __importDefault(require("./routes/impresoras"));
 app.use(authRouter);
@@ -168,11 +173,82 @@ app.use(limpiezaRouter);
 app.use(comandosRouter);
 app.use(agenteRouter);
 app.use(licencias_1.default);
+app.use(updates_1.default);
 app.use(software_1.default);
 app.use("/api/impresora", impresoras_1.default);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.use(public_1.default);
 app.use(tokens_1.default);
+// F5c — Gestión de versiones del agente Go
+const fs_1 = __importDefault(require("fs"));
+const VERSION_FILE = path.join(__dirname, '../public/downloads/version-activa.txt');
+const VERSIONS_DIR = path.join(__dirname, '../public/downloads/versions');
+function getVersionActiva() {
+    try {
+        return fs_1.default.readFileSync(VERSION_FILE, 'utf8').trim();
+    }
+    catch {
+        return '4.0';
+    }
+}
+// GET /api/version — versión activa (consultada por el agente --poll)
+app.get('/api/version', (req, res) => {
+    const version = getVersionActiva();
+    const exePath = path.join(VERSIONS_DIR, `xentra-agent-${version}.exe`);
+    let sha256 = '';
+    try {
+        const crypto = require('crypto');
+        const data = fs_1.default.readFileSync(exePath);
+        sha256 = crypto.createHash('sha256').update(data).digest('hex');
+    }
+    catch {
+        sha256 = '';
+    }
+    res.json({ version, sha256 });
+});
+// GET /api/version/lista — versiones disponibles en /downloads/versions/
+app.get('/api/version/lista', (req, res) => {
+    try {
+        const archivos = fs_1.default.readdirSync(VERSIONS_DIR)
+            .filter(f => f.endsWith('.exe'))
+            .map(f => {
+            const stat = fs_1.default.statSync(path.join(VERSIONS_DIR, f));
+            const match = f.match(/xentra-agent-(.+)\.exe$/);
+            return {
+                archivo: f,
+                version: match ? match[1] : f,
+                fecha: stat.mtime.toISOString().split('T')[0],
+                tamano_mb: (stat.size / 1024 / 1024).toFixed(1)
+            };
+        })
+            .sort((a, b) => b.version.localeCompare(a.version));
+        res.json({ activa: getVersionActiva(), versiones: archivos });
+    }
+    catch (e) {
+        res.status(500).json({ error: 'No se pudo leer el directorio de versiones' });
+    }
+});
+// GET /downloads/xentra-agent.exe — sirve el exe de la versión activa
+app.get('/downloads/xentra-agent.exe', (req, res) => {
+    const version = getVersionActiva();
+    const exePath = path.join(VERSIONS_DIR, `xentra-agent-${version}.exe`);
+    if (!fs_1.default.existsSync(exePath)) {
+        return res.status(404).json({ error: `Versión ${version} no encontrada` });
+    }
+    res.download(exePath, 'xentra-agent.exe');
+});
+// POST /api/version/activar — cambia la versión activa
+app.post('/api/version/activar', (req, res) => {
+    const { version } = req.body;
+    if (!version)
+        return res.status(400).json({ error: 'Falta version' });
+    const exePath = path.join(VERSIONS_DIR, `xentra-agent-${version}.exe`);
+    if (!fs_1.default.existsSync(exePath)) {
+        return res.status(404).json({ error: `Versión ${version} no existe en /versions/` });
+    }
+    fs_1.default.writeFileSync(VERSION_FILE, version, 'utf8');
+    res.json({ ok: true, version_activa: version });
+});
 app.listen(PORT, () => (0, logger_1.logInfo)("SERVIDOR_INICIADO", { mensaje: `xentra-agent-ts corriendo en http://localhost:${PORT}` }));
 const alertas_pcs_1 = require("./cron/alertas-pcs");
 // Cron: verificar PCs sin reporte cada 60 minutos

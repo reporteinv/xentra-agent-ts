@@ -652,6 +652,22 @@ function Procesar-Comando {
         }
         'inventario_ahora'  { Enviar-Programas $datos.serial; $res.output = "Inventario enviado" }
         'reporte_ahora'     { Enviar-Json '/api/pc/reportar' $datos 20; $res.output = "Reporte enviado" }
+        'get_logs' {
+            $logPath = 'C:\Xentra\xentra-agent.log'
+            $lineas = if ($resp.params -and $resp.params.lineas) { [int]$resp.params.lineas } else { 100 }
+            if (Test-Path $logPath) {
+                $res.output = (Get-Content $logPath -Tail $lineas) -join "`n"
+            } else {
+                $res.estado = 'error'; $res.output = "Log no encontrado: $logPath"
+            }
+        }
+        'get_processes' {
+            $top = if ($resp.params -and $resp.params.top) { [int]$resp.params.top } else { 30 }
+            $procs = Get-Process | Sort-Object CPU -Descending | Select-Object -First $top |
+                Select-Object Name, Id, @{N='CPU';E={[math]::Round($_.CPU,1)}}, @{N='RAM_MB';E={[math]::Round($_.WorkingSet64/1MB,1)}} |
+                ConvertTo-Json -Compress
+            $res.output = $procs
+        }
         default { $res.estado = 'error'; $res.output = "Comando desconocido: $($resp.comando)" }
     }
     try { Enviar-Json '/api/pc/comandos/resultado' $res 15 } catch { Write-Log "Error enviando resultado: $_" }

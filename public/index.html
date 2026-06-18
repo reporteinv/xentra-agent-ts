@@ -18,12 +18,21 @@
       <h1>🖥️ NES-UNGRD</h1>
       <div class="header-right">
         <div class="dropdown">
-          <a
-            href="/api/descargar-agente"
-            class="btn-export"
-            style="text-decoration: none; background: #6c757d"
-            >📦 Instalador</a
-          >
+          <div class="instalador-wrap" style="position:relative;display:inline-block;">
+            <button class="btn-export" style="background:#6c757d;" onclick="toggleInstalador(event)">📦 Instalador ▾</button>
+            <div id="instaladorMenu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:260px;background:#2a2a4a;border:1px solid rgba(255,255,255,0.15);border-radius:10px;overflow:hidden;z-index:999;">
+              <div style="padding:6px 12px 3px;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;">Agente PowerShell</div>
+              <a href="/api/descargar-agente" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.12);" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background=''" onclick="cerrarInstalador()">
+                <div><div style="font-size:13px;font-weight:500;">📄 xentra-agent.zip</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">setup.bat + xentra-agent.ps1</div></div>
+                <span style="font-size:13px;color:rgba(255,255,255,0.4);">⬇</span>
+              </a>
+              <div style="padding:6px 12px 3px;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;">Agente Go — binario</div>
+              <div id="instaladorVersiones"><div style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.4);">Cargando versiones...</div></div>
+              <div style="border-top:1px solid rgba(255,255,255,0.07);padding:7px 14px;">
+                <span style="font-size:11px;color:rgba(255,255,255,0.3);">ⓘ <b style="color:rgba(255,255,255,0.45);">activa</b> = versión que descargan los PCs vía --poll</span>
+              </div>
+            </div>
+          </div>
           <button class="btn-export" onclick="toggleDropdown()">
             ⬇️ Exportar ▾
           </button>
@@ -974,6 +983,59 @@
     });
     // También parchear al abrir cualquier menú
     setInterval(window._patchMenuComandos, 2000);
+  </script>
+  <script>
+  function toggleInstalador(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('instaladorMenu');
+    const abierto = menu.style.display === 'block';
+    cerrarInstalador();
+    if (!abierto) {
+      menu.style.display = 'block';
+      cargarVersionesInstalador();
+    }
+  }
+  function cerrarInstalador() {
+    const menu = document.getElementById('instaladorMenu');
+    if (menu) menu.style.display = 'none';
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.instalador-wrap')) cerrarInstalador();
+  });
+  async function cargarVersionesInstalador() {
+    const cont = document.getElementById('instaladorVersiones');
+    try {
+      const r = await fetch('/api/version/lista');
+      const data = await r.json();
+      if (!data.versiones || !data.versiones.length) {
+        cont.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.4);">Sin versiones disponibles</div>';
+        return;
+      }
+      cont.innerHTML = data.versiones.map(v => {
+        const esActiva = v.version === data.activa;
+        const esReciente = data.versiones[0].version === v.version && !esActiva;
+        const badge = esActiva
+          ? '<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(74,158,255,0.18);color:#4a9eff;">activa</span>'
+          : esReciente
+          ? '<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(59,200,120,0.15);color:#3bc878;">reciente</span>'
+          : '<span style="font-size:13px;color:rgba(255,255,255,0.3);">⬇</span>';
+        return `<a href="/downloads/versions/xentra-agent-${v.version}.exe"
+          download="xentra-agent-${v.version}.exe"
+          style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;color:${esActiva?'#fff':'rgba(255,255,255,0.7)'};text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.07);${esActiva?'background:rgba(255,255,255,0.04);':''}"
+          onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+          onmouseout="this.style.background='${esActiva?'rgba(255,255,255,0.04)':''}'"
+          onclick="cerrarInstalador()">
+          <div>
+            <div style="font-size:13px;font-weight:500;">xentra-agent ${v.version}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">${v.fecha} &nbsp;·&nbsp; ${v.tamano_mb} MB</div>
+          </div>
+          ${badge}
+        </a>`;
+      }).join('');
+    } catch(err) {
+      cont.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:#e74c3c;">Error cargando versiones</div>';
+    }
+  }
   </script>
 </body>
 </html>
