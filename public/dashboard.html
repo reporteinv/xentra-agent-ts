@@ -275,8 +275,7 @@
               clearInterval(poll);
               const color = st.estado === 'completado' ? '#58d68d' : '#e74c3c';
               out.style.color = color;
-              out.textContent = '[' + st.estado.toUpperCase() + ']
-' + (st.output || '—');
+              out.textContent = '[' + st.estado.toUpperCase() + ']' + (st.output || '—');
             } else if (intentos >= 60) {
               clearInterval(poll);
               out.textContent = '⏱️ Timeout — el PC no respondió en 5 min';
