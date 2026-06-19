@@ -14,7 +14,34 @@
       <h1>📊 Estadistica</h1>
       <nav>
         <a href="/">← Volver</a>
-        <a href="/sw9k3" style="color:white;text-decoration:none;font-size:0.9rem;margin-left:12px;padding:0.4rem 0.8rem;background:rgba(255,255,255,0.1);border-radius:6px;">⚠️ Software</a>
+        <a
+          href="/sw9k3"
+          style="
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-left: 12px;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+          "
+          >⚠️ Software</a
+        >
+        <button
+          onclick="abrirAIScore()"
+          style="
+            margin-left: 8px;
+            padding: 0.4rem 0.8rem;
+            background: rgba(99, 102, 241, 0.3);
+            border: 1px solid rgba(99, 102, 241, 0.6);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+          "
+        >
+          🤖 AI Score
+        </button>
         <button
           id="btnDark"
           onclick="toggleDark()"
@@ -186,148 +213,718 @@
       cargarStatsProgramas();
       setInterval(() => location.reload(), 300000);
     </script>
-  
-  <!-- Modal Comandos Remotos AG2 -->
-  <div id="modalComandosAg2" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:var(--card-bg,#1e2a3a);border-radius:12px;padding:24px;min-width:420px;max-width:600px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div>
-          <h3 style="margin:0;color:#5dade2;"><i class="fas fa-terminal"></i> Comandos remotos</h3>
-          <div id="ag2CmdSub" style="font-size:0.85rem;color:#aaa;margin-top:2px;"></div>
+
+    <!-- Modal Comandos Remotos AG2 -->
+    <div
+      id="modalComandosAg2"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: var(--card-bg, #1e2a3a);
+          border-radius: 12px;
+          padding: 24px;
+          min-width: 420px;
+          max-width: 600px;
+          width: 90%;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+          "
+        >
+          <div>
+            <h3 style="margin: 0; color: #5dade2">
+              <i class="fas fa-terminal"></i> Comandos remotos
+            </h3>
+            <div
+              id="ag2CmdSub"
+              style="font-size: 0.85rem; color: #aaa; margin-top: 2px"
+            ></div>
+          </div>
+          <button
+            onclick="cerrarModalComandosAg2()"
+            style="
+              background: none;
+              border: none;
+              color: #aaa;
+              font-size: 1.2rem;
+              cursor: pointer;
+            "
+          >
+            &#x2715;
+          </button>
         </div>
-        <button onclick="cerrarModalComandosAg2()" style="background:none;border:none;color:#aaa;font-size:1.2rem;cursor:pointer;">&#x2715;</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('limpiar')">🧹 Limpiar disco</button>
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('inventario_ahora')">📋 Inventario ya</button>
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('actualizar_agente')">🔄 Actualizar agente</button>
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('get_logs')">📄 Ver Logs</button>
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('get_processes')">⚙️ Procesos</button>
-        <button class="btn-cmd-ag2" onclick="pedirIntervalo()">⏱️ Cambiar intervalo</button>
-        <button class="btn-cmd-ag2" onclick="enviarComandoAg2('cerrar_sesion')">🚪 Cerrar sesión</button>
-        <button class="btn-cmd-ag2" style="background:#c0392b;" onclick="enviarComandoAg2('reiniciar')">🔁 Reiniciar</button>
-      </div>
-      <pre id="ag2CmdOutput" style="background:#0d1117;color:#58d68d;padding:12px;border-radius:8px;min-height:60px;max-height:300px;overflow-y:auto;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;margin:0;">—</pre>
-      <div style="margin-top:12px;text-align:right;">
-        <button onclick="cerrarModalComandosAg2()" style="padding:6px 16px;border-radius:6px;border:1px solid #5dade2;background:none;color:#5dade2;cursor:pointer;">Cerrar</button>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+          "
+        >
+          <button class="btn-cmd-ag2" onclick="enviarComandoAg2('limpiar')">
+            🧹 Limpiar disco
+          </button>
+          <button
+            class="btn-cmd-ag2"
+            onclick="enviarComandoAg2('inventario_ahora')"
+          >
+            📋 Inventario ya
+          </button>
+          <button
+            class="btn-cmd-ag2"
+            onclick="enviarComandoAg2('actualizar_agente')"
+          >
+            🔄 Actualizar agente
+          </button>
+          <button class="btn-cmd-ag2" onclick="enviarComandoAg2('get_logs')">
+            📄 Ver Logs
+          </button>
+          <button
+            class="btn-cmd-ag2"
+            onclick="enviarComandoAg2('get_processes')"
+          >
+            ⚙️ Procesos
+          </button>
+          <button class="btn-cmd-ag2" onclick="pedirIntervalo()">
+            ⏱️ Cambiar intervalo
+          </button>
+          <button
+            class="btn-cmd-ag2"
+            onclick="enviarComandoAg2('cerrar_sesion')"
+          >
+            🚪 Cerrar sesión
+          </button>
+          <button
+            class="btn-cmd-ag2"
+            style="background: #c0392b"
+            onclick="enviarComandoAg2('reiniciar')"
+          >
+            🔁 Reiniciar
+          </button>
+        </div>
+        <pre
+          id="ag2CmdOutput"
+          style="
+            background: #0d1117;
+            color: #58d68d;
+            padding: 12px;
+            border-radius: 8px;
+            min-height: 60px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+          "
+        >
+—</pre
+        >
+        <div style="margin-top: 12px; text-align: right">
+          <button
+            onclick="cerrarModalComandosAg2()"
+            style="
+              padding: 6px 16px;
+              border-radius: 6px;
+              border: 1px solid #5dade2;
+              background: none;
+              color: #5dade2;
+              cursor: pointer;
+            "
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <style>
-    .btn-cmd-ag2 {
-      padding: 10px 8px;
-      border-radius: 8px;
-      border: 1px solid #3a4a5a;
-      background: #243447;
-      color: #e0e0e0;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.2s;
-    }
-    .btn-cmd-ag2:hover { background: #2e4057; }
-  </style>
-
-  <script>
-    let _ag2PcActual = null;
-
-    function abrirComandosAg2(pcId, nombre) {
-      _ag2PcActual = pcId;
-      document.getElementById('ag2CmdSub').textContent = nombre || '';
-      document.getElementById('ag2CmdOutput').textContent = '—';
-      document.getElementById('modalComandosAg2').style.display = 'flex';
-    }
-
-    function cerrarModalComandosAg2() {
-      document.getElementById('modalComandosAg2').style.display = 'none';
-    }
-
-    function pedirIntervalo() {
-      const min = prompt('Nuevo intervalo en minutos (ej: 20):');
-      if (!min || isNaN(min) || parseInt(min) < 1) return;
-      enviarComandoAg2('cambiar_intervalo', { minutos: parseInt(min) });
-    }
-
-    async function enviarComandoAg2(comando, params) {
-      if (!_ag2PcActual) return;
-      const confirmados = ['reiniciar', 'cerrar_sesion'];
-      if (confirmados.includes(comando) && !confirm('¿Ejecutar ' + comando + ' en este PC?')) return;
-      const out = document.getElementById('ag2CmdOutput');
-      out.textContent = '⏳ Enviando comando...';
-      try {
-        const r = await fetch('/api/comandos/crear', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pc_id: _ag2PcActual, comando, params: params || null })
-        });
-        const data = await r.json();
-        if (!data.ok) { out.textContent = '❌ Error: ' + (data.error || 'desconocido'); return; }
-        out.textContent = '⏳ Esperando respuesta del PC...';
-        const cmdId = data.id;
-        if (!cmdId) return;
-        let intentos = 0;
-        const poll = setInterval(async () => {
-          intentos++;
-          try {
-            const rs = await fetch('/api/comandos/estado/' + cmdId);
-            const st = await rs.json();
-            if (st && st.estado && st.estado !== 'pendiente' && st.estado !== 'ejecutando') {
-              clearInterval(poll);
-              const color = st.estado === 'completado' ? '#58d68d' : '#e74c3c';
-              out.style.color = color;
-              out.textContent = '[' + st.estado.toUpperCase() + ']' + (st.output || '—');
-            } else if (intentos >= 60) {
-              clearInterval(poll);
-              out.textContent = '⏱️ Timeout — el PC no respondió en 5 min';
-            }
-          } catch(e) {}
-        }, 5000);
-      } catch(e) {
-        out.textContent = '❌ Error: ' + e.message;
+    <style>
+      .btn-cmd-ag2 {
+        padding: 10px 8px;
+        border-radius: 8px;
+        border: 1px solid #3a4a5a;
+        background: #243447;
+        color: #e0e0e0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background 0.2s;
       }
-    }
+      .btn-cmd-ag2:hover {
+        background: #2e4057;
+      }
+    </style>
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') cerrarModalComandosAg2();
-    });
-  </script>
+    <script>
+      let _ag2PcActual = null;
 
+      function abrirComandosAg2(pcId, nombre) {
+        _ag2PcActual = pcId;
+        document.getElementById("ag2CmdSub").textContent = nombre || "";
+        document.getElementById("ag2CmdOutput").textContent = "—";
+        document.getElementById("modalComandosAg2").style.display = "flex";
+      }
+
+      function cerrarModalComandosAg2() {
+        document.getElementById("modalComandosAg2").style.display = "none";
+      }
+
+      function pedirIntervalo() {
+        const min = prompt("Nuevo intervalo en minutos (ej: 20):");
+        if (!min || isNaN(min) || parseInt(min) < 1) return;
+        enviarComandoAg2("cambiar_intervalo", { minutos: parseInt(min) });
+      }
+
+      async function enviarComandoAg2(comando, params) {
+        if (!_ag2PcActual) return;
+        const confirmados = ["reiniciar", "cerrar_sesion"];
+        if (
+          confirmados.includes(comando) &&
+          !confirm("¿Ejecutar " + comando + " en este PC?")
+        )
+          return;
+        const out = document.getElementById("ag2CmdOutput");
+        out.textContent = "⏳ Enviando comando...";
+        try {
+          const r = await fetch("/api/comandos/crear", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pc_id: _ag2PcActual,
+              comando,
+              params: params || null,
+            }),
+          });
+          const data = await r.json();
+          if (!data.ok) {
+            out.textContent = "❌ Error: " + (data.error || "desconocido");
+            return;
+          }
+          out.textContent = "⏳ Esperando respuesta del PC...";
+          const cmdId = data.id;
+          if (!cmdId) return;
+          let intentos = 0;
+          const poll = setInterval(async () => {
+            intentos++;
+            try {
+              const rs = await fetch("/api/comandos/estado/" + cmdId);
+              const st = await rs.json();
+              if (
+                st &&
+                st.estado &&
+                st.estado !== "pendiente" &&
+                st.estado !== "ejecutando"
+              ) {
+                clearInterval(poll);
+                const color =
+                  st.estado === "completado" ? "#58d68d" : "#e74c3c";
+                out.style.color = color;
+                out.textContent =
+                  "[" + st.estado.toUpperCase() + "]" + (st.output || "—");
+              } else if (intentos >= 60) {
+                clearInterval(poll);
+                out.textContent = "⏱️ Timeout — el PC no respondió en 5 min";
+              }
+            } catch (e) {}
+          }, 5000);
+        } catch (e) {
+          out.textContent = "❌ Error: " + e.message;
+        }
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") cerrarModalComandosAg2();
+      });
+    </script>
 
     <script>
       // Patch: agregar botón Comandos al config-menu de cada PC
       function _patchMenuComandos() {
-        document.querySelectorAll('.config-menu').forEach(menu => {
-          if (menu.querySelector('.btn-comandos-ag2')) return;
-          const header = menu.querySelector('.cmenu-header');
+        document.querySelectorAll(".config-menu").forEach((menu) => {
+          if (menu.querySelector(".btn-comandos-ag2")) return;
+          const header = menu.querySelector(".cmenu-header");
           if (!header) return;
-          const nombre = header.textContent.replace('⚙️ ','').trim();
-          const tr = menu.closest('tr');
+          const nombre = header.textContent.replace("⚙️ ", "").trim();
+          const tr = menu.closest("tr");
           if (!tr) return;
           const idMatch = tr.innerHTML.match(/verDetalles\((\d+)\)/);
           if (!idMatch) return;
           const id = idMatch[1];
-          const a = document.createElement('a');
-          a.href = '#';
-          a.className = 'cmenu-item btn-comandos-ag2';
-          a.innerHTML = '💻 Comandos';
-          a.onclick = (e) => { e.preventDefault(); abrirComandosAg2(parseInt(id), nombre); cerrarConfigs(); };
+          const a = document.createElement("a");
+          a.href = "#";
+          a.className = "cmenu-item btn-comandos-ag2";
+          a.innerHTML = "💻 Comandos";
+          a.onclick = (e) => {
+            e.preventDefault();
+            abrirComandosAg2(parseInt(id), nombre);
+            cerrarConfigs();
+          };
           menu.appendChild(a);
         });
       }
       // Observar cambios en la tabla
-      document.addEventListener('DOMContentLoaded', () => {
-        const tabla = document.getElementById('tablaPcs');
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabla = document.getElementById("tablaPcs");
         if (tabla) {
-          new MutationObserver(_patchMenuComandos).observe(tabla, { childList: true, subtree: true });
+          new MutationObserver(_patchMenuComandos).observe(tabla, {
+            childList: true,
+            subtree: true,
+          });
         }
       });
       // Fallback: también parchear cuando se abre el menú
-      document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-config')) {
+      document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("btn-config")) {
           setTimeout(_patchMenuComandos, 50);
         }
       });
     </script>
 
+    <!-- MODAL AI SCORE -->
+    <div
+      id="modalAIScore"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        overflow-y: auto;
+      "
+    >
+      <div
+        id="modalAIScoreInner"
+        style="
+          position: fixed;
+          top: 40px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 860px;
+          max-width: 95vw;
+          max-height: 88vh;
+          overflow-y: auto;
+          background: #1a1a2e;
+          border: 1px solid #333;
+          border-radius: 12px;
+          padding: 28px;
+          color: #fff;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <h2 style="margin: 0; font-size: 1.2rem">
+            Capacidad Para Soporte de IA
+          </h2>
+          <button
+            onclick="cerrarAIScore()"
+            style="
+              background: none;
+              border: none;
+              color: #aaa;
+              font-size: 1.4rem;
+              cursor: pointer;
+            "
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- KPIs -->
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+          "
+          id="aiKpis"
+        >
+          <div
+            style="
+              background: #0f0f1a;
+              border-radius: 8px;
+              padding: 14px;
+              border-left: 3px solid #6366f1;
+            "
+          >
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px">
+              PCs analizados
+            </div>
+            <div style="font-size: 24px; font-weight: 600" id="aiTotal">—</div>
+          </div>
+          <div
+            style="
+              background: #0f0f1a;
+              border-radius: 8px;
+              padding: 14px;
+              border-left: 3px solid #a78bfa;
+            "
+          >
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px">
+              Promedio
+            </div>
+            <div style="font-size: 24px; font-weight: 600" id="aiPromedio">
+              —
+            </div>
+            <div style="font-size: 11px; color: #666">/ 100 pts</div>
+          </div>
+          <div
+            style="
+              background: #0f0f1a;
+              border-radius: 8px;
+              padding: 14px;
+              border-left: 3px solid #3b82f6;
+            "
+          >
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px">
+              Aptos Para IA
+            </div>
+            <div style="font-size: 24px; font-weight: 600" id="aiReady">—</div>
+          </div>
+          <div
+            style="
+              background: #0f0f1a;
+              border-radius: 8px;
+              padding: 14px;
+              border-left: 3px solid #10b981;
+            "
+          >
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px">
+              Con NPU
+            </div>
+            <div style="font-size: 24px; font-weight: 600" id="aiNpu">—</div>
+          </div>
+        </div>
+
+        <!-- Distribución -->
+        <div style="margin-bottom: 16px">
+          <div
+            style="
+              font-size: 11px;
+              color: #666;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            "
+          >
+            Distribución por categoría
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+            "
+          >
+            <div
+              style="
+                background: #0f0f1a;
+                border-radius: 8px;
+                padding: 12px;
+                text-align: center;
+                border-top: 3px solid #e24b4a;
+              "
+            >
+              <div style="font-size: 12px; color: #e24b4a; margin-bottom: 4px">
+                No apto
+              </div>
+              <div style="font-size: 22px; font-weight: 600" id="distNoApto">
+                —
+              </div>
+              <div style="font-size: 11px; color: #555">0–30 pts</div>
+            </div>
+            <div
+              style="
+                background: #0f0f1a;
+                border-radius: 8px;
+                padding: 12px;
+                text-align: center;
+                border-top: 3px solid #f59e0b;
+              "
+            >
+              <div style="font-size: 12px; color: #f59e0b; margin-bottom: 4px">
+                Básico
+              </div>
+              <div style="font-size: 22px; font-weight: 600" id="distBasico">
+                —
+              </div>
+              <div style="font-size: 11px; color: #555">31–60 pts</div>
+            </div>
+            <div
+              style="
+                background: #0f0f1a;
+                border-radius: 8px;
+                padding: 12px;
+                text-align: center;
+                border-top: 3px solid #10b981;
+              "
+            >
+              <div style="font-size: 12px; color: #10b981; margin-bottom: 4px">
+                Preparado
+              </div>
+              <div style="font-size: 22px; font-weight: 600" id="distPreparado">
+                —
+              </div>
+              <div style="font-size: 11px; color: #555">61–85 pts</div>
+            </div>
+            <div
+              style="
+                background: #0f0f1a;
+                border-radius: 8px;
+                padding: 12px;
+                text-align: center;
+                border-top: 3px solid #3b82f6;
+              "
+            >
+              <div style="font-size: 12px; color: #3b82f6; margin-bottom: 4px">
+                Óptimo
+              </div>
+              <div style="font-size: 22px; font-weight: 600" id="distAIReady">
+                —
+              </div>
+              <div style="font-size: 11px; color: #555">86–100 pts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barras adopción -->
+        <div
+          style="
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+          "
+        >
+          <div
+            style="
+              font-size: 11px;
+              color: #666;
+              margin-bottom: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            "
+          >
+            Adopción por criterio
+          </div>
+          <div id="aiBars"></div>
+        </div>
+
+        <!-- Ranking -->
+        <div style="background: #0f0f1a; border-radius: 8px; overflow: hidden">
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 2fr 1fr 1fr 80px;
+              gap: 8px;
+              padding: 10px 14px;
+              font-size: 11px;
+              color: #666;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              border-bottom: 1px solid #222;
+            "
+          >
+            <div>Equipo</div>
+            <div>CPU</div>
+            <div>RAM</div>
+            <div style="text-align: right">Score</div>
+          </div>
+          <div id="aiRanking"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function abrirAIScore() {
+        document.getElementById("modalAIScore").style.display = "block";
+        cargarAIScore();
+        setTimeout(() => {
+          const popup = document.getElementById('modalAIScoreInner');
+          if (!popup || popup._dragOk) return;
+          popup._dragOk = true;
+          const header = popup.querySelector('div');
+          if (!header) return;
+          header.style.cursor = 'move';
+          header.style.userSelect = 'none';
+          header.addEventListener('mousedown', e => {
+            if (e.target.tagName === 'BUTTON') return;
+            const rect = popup.getBoundingClientRect();
+            popup.style.transform = 'none';
+            popup.style.left = rect.left + 'px';
+            popup.style.top  = rect.top  + 'px';
+            let ox = rect.left, oy = rect.top, sx = e.clientX, sy = e.clientY;
+            const mm = e2 => {
+              popup.style.left = (ox + e2.clientX - sx) + 'px';
+              popup.style.top  = (oy + e2.clientY - sy) + 'px';
+            };
+            const mu = () => {
+              document.removeEventListener('mousemove', mm);
+              document.removeEventListener('mouseup', mu);
+            };
+            document.addEventListener('mousemove', mm);
+            document.addEventListener('mouseup', mu);
+            e.preventDefault();
+          });
+        }, 300);
+      }
+      function cerrarAIScore() {
+        document.getElementById("modalAIScore").style.display = "none";
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") cerrarAIScore();
+      });
+
+      async function cargarAIScore() {
+        try {
+          const r = await fetch("/api/ai-score/flota");
+          const d = await r.json();
+
+          document.getElementById("aiTotal").textContent = d.total;
+          document.getElementById("aiPromedio").textContent = d.promedio;
+          document.getElementById("aiReady").textContent = d.dist.ai_ready;
+          document.getElementById("aiNpu").textContent = d.adopcion.npu;
+          document.getElementById("distNoApto").textContent = d.dist.no_apto;
+          document.getElementById("distBasico").textContent = d.dist.basico;
+          document.getElementById("distPreparado").textContent =
+            d.dist.preparado;
+          document.getElementById("distAIReady").textContent = d.dist.ai_ready;
+
+          const criterios = [
+            {
+              label: "NPU detectada",
+              key: "npu",
+              pts: "+40",
+              color: "#6366f1",
+            },
+            {
+              label: "CPU generación AI",
+              key: "ai_ready",
+              pts: "+20",
+              color: "#6366f1",
+            },
+            { label: "vPRO", key: "vpro", pts: "+10", color: "#a78bfa" },
+            { label: "TPM 2.0", key: "tpm", pts: "+10", color: "#a78bfa" },
+            { label: "RAM ≥ 16 GB", key: "ram", pts: "+10", color: "#10b981" },
+            {
+              label: "Secure Boot",
+              key: "secure_boot",
+              pts: "+5",
+              color: "#10b981",
+            },
+            {
+              label: "Disco SSD/NVMe",
+              key: "disco_ssd",
+              pts: "+5",
+              color: "#10b981",
+            },
+          ];
+          const barsEl = document.getElementById("aiBars");
+          barsEl.innerHTML = criterios
+            .map((c) => {
+              const pct =
+                d.total > 0
+                  ? Math.round((d.adopcion[c.key] / d.total) * 100)
+                  : 0;
+              return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div style="width:160px;font-size:12px;color:#aaa;flex-shrink:0;">${c.label} <span style="color:#555;">${c.pts}</span></div>
+            <div style="flex:1;height:7px;background:#1e1e2e;border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${c.color};border-radius:4px;"></div>
+            </div>
+            <div style="font-size:12px;font-weight:600;color:#fff;width:36px;text-align:right;">${pct}%</div>
+          </div>`;
+            })
+            .join("");
+
+          const colores = {
+            ai_ready: "#3b82f6",
+            preparado: "#10b981",
+            basico: "#f59e0b",
+            no_apto: "#e24b4a",
+          };
+          const rankEl = document.getElementById("aiRanking");
+          rankEl.innerHTML = d.ranking
+            .map(
+              (pc) => `
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 80px;gap:8px;padding:10px 14px;border-bottom:1px solid #1a1a2e;font-size:13px;align-items:center;">
+            <div>
+              <div style="font-weight:500;">${pc.nombre_equipo || pc.serial}</div>
+              <div style="font-size:11px;color:#555;">${pc.modelo || ""}</div>
+            </div>
+            <div style="font-size:12px;color:#aaa;">${pc.fabricante_cpu || "—"}</div>
+            <div style="font-size:12px;color:#aaa;">${pc.criterios.ram ? "≥16 GB ✓" : "< 16 GB"}</div>
+            <div style="text-align:right;">
+              <span style="background:${colores[pc.categoria]}22;color:${colores[pc.categoria]};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${pc.score}</span>
+            </div>
+          </div>`,
+            )
+            .join("");
+        } catch (e) {
+          document.getElementById("aiRanking").innerHTML =
+            '<div style="padding:20px;color:#e74c3c;">Error cargando datos: ' +
+            e.message +
+            "</div>";
+        }
+      }
+    </script>
+  
+  <script>
+    (function() {
+      let isDragging = false, startX, startY, origX, origY, dragInit = false;
+      function initDrag() {
+        if (dragInit) return;
+        const popup = document.getElementById('modalAIScoreInner');
+        if (!popup) return;
+        const header = popup.querySelector('div');
+        if (!header) return;
+        dragInit = true;
+        header.style.cursor = 'move';
+        header.style.userSelect = 'none';
+        header.addEventListener('mousedown', e => {
+          if (e.target.tagName === 'BUTTON') return;
+          const rect = popup.getBoundingClientRect();
+          popup.style.transform = 'none';
+          popup.style.left = rect.left + 'px';
+          popup.style.top  = rect.top  + 'px';
+          isDragging = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          origX  = rect.left;
+          origY  = rect.top;
+          e.preventDefault();
+        });
+      }
+      document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const popup = document.getElementById('modalAIScoreInner');
+        if (popup) {
+          popup.style.left = (origX + (e.clientX - startX)) + 'px';
+          popup.style.top  = (origY + (e.clientY - startY)) + 'px';
+        }
+      });
+      document.addEventListener('mouseup', () => { isDragging = false; });
+      window._initAIDrag = function() { dragInit = false; initDrag(); };
+    })();
+  </script>
 </body>
 </html>

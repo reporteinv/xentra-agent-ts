@@ -208,4 +208,71 @@ router.get("/api/metrics", async (req: Request, res: Response) => {
   }
 });
 
+
+router.get("/api/ai-score/flota", async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(`
+      SELECT
+        id, serial, nombre_equipo, modelo, fabricante_cpu,
+        tiene_npu, npu_nombre, es_ai_ready,
+        tiene_tpm, tpm_version, secure_boot, tiene_vpro,
+        ram_gb, tipo_disco
+      FROM pcs WHERE activo=1
+    `);
+
+    const pcs = (rows as any[]).map(pc => {
+      let score = 0;
+      const criterios: Record<string, boolean> = {};
+
+      criterios.npu        = !!pc.tiene_npu;                                              if (criterios.npu)    score += 40;
+      criterios.ai_ready   = !!pc.es_ai_ready;                                            if (criterios.ai_ready)  score += 20;
+      criterios.vpro       = !!pc.tiene_vpro;                                             if (criterios.vpro)   score += 10;
+      criterios.tpm        = !!pc.tiene_tpm && pc.tpm_version?.startsWith('2');           if (criterios.tpm)    score += 10;
+      criterios.ram        = (pc.ram_gb || 0) >= 16;                                      if (criterios.ram)    score += 10;
+      criterios.secure_boot= !!pc.secure_boot;                                            if (criterios.secure_boot) score += 5;
+      criterios.disco_ssd  = ['SSD','NVMe','Solid State Drive'].includes(pc.tipo_disco || ''); if (criterios.disco_ssd) score += 5;
+
+      const categoria =
+        score >= 86 ? 'ai_ready' :
+        score >= 61 ? 'preparado' :
+        score >= 31 ? 'basico' : 'no_apto';
+
+      return {
+        id: pc.id,
+        serial: pc.serial,
+        nombre_equipo: pc.nombre_equipo,
+        modelo: pc.modelo,
+        fabricante_cpu: pc.fabricante_cpu,
+        score,
+        categoria,
+        criterios
+      };
+    });
+
+    const total = pcs.length;
+    const dist = {
+      no_apto:   pcs.filter(p => p.categoria === 'no_apto').length,
+      basico:    pcs.filter(p => p.categoria === 'basico').length,
+      preparado: pcs.filter(p => p.categoria === 'preparado').length,
+      ai_ready:  pcs.filter(p => p.categoria === 'ai_ready').length,
+    };
+    const promedio = total > 0 ? Math.round(pcs.reduce((a, p) => a + p.score, 0) / total) : 0;
+    const adopcion = {
+      npu:         pcs.filter(p => p.criterios.npu).length,
+      ai_ready:    pcs.filter(p => p.criterios.ai_ready).length,
+      vpro:        pcs.filter(p => p.criterios.vpro).length,
+      tpm:         pcs.filter(p => p.criterios.tpm).length,
+      ram:         pcs.filter(p => p.criterios.ram).length,
+      secure_boot: pcs.filter(p => p.criterios.secure_boot).length,
+      disco_ssd:   pcs.filter(p => p.criterios.disco_ssd).length,
+    };
+    const ranking = [...pcs].sort((a, b) => b.score - a.score).slice(0, 20);
+
+    res.json({ total, promedio, dist, adopcion, ranking });
+  } catch (e: any) {
+    logError("AI_SCORE_ERROR", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export = router;
