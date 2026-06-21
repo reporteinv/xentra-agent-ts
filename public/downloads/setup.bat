@@ -15,7 +15,7 @@ cd /d "%SRCDIR%"
 cls
 echo.
 echo  ========================================
-echo          XENTRASOFT SETUP v4.7.0
+echo          XENTRASOFT SETUP v4.7.10
 echo  ========================================
 echo.
 echo   1. Instalar
@@ -35,7 +35,7 @@ goto menu
 cls
 echo.
 echo  ========================================
-echo          XENTRASOFT SETUP v4.7.0
+echo          XENTRASOFT SETUP v4.7.10
 echo  ========================================
 echo.
 echo  [1/5] Limpiando instalacion previa...
@@ -72,7 +72,7 @@ echo  [5/5] Listo.
 echo.
 echo  ========================================
 echo   === Instalacion EXITOSA ===
-echo   Agente: v4.7.0
+echo   Agente: v4.7.10
 echo   Reporte: cada 20 min
 echo   Poll:    cada 1 min
 echo  ========================================
