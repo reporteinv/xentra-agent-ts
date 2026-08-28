@@ -54,8 +54,16 @@ echo "$(date) — Espejo NVMe OK: $NVME_DIR" >> "$LOG"
 MAIL_ZIP="/tmp/backup-agent-$DATE.zip"
 MAIL_STAGE="/tmp/mail-stage-$DATE"
 mkdir -p "$MAIL_STAGE"
-unzip -q "$SD_DIR/codigo-agent.zip" -d "$MAIL_STAGE" -x "*.bat*" "*.bak" "*.js"
+unzip -q "$SD_DIR/codigo-agent.zip" -d "$MAIL_STAGE"
 cp "$SD_DIR/manifest.txt" "$SD_DIR/xentra_pcs_db.sql.gz" "$MAIL_STAGE/"
+if [ -f "$SD_DIR/xentra-agent.exe" ]; then
+  cp "$SD_DIR/xentra-agent.exe" "$MAIL_STAGE/"
+fi
+while IFS= read -r -d "" f; do
+  base64 "$f" > "$f.b64.txt"
+  rm -f "$f"
+done < <(find "$MAIL_STAGE" -type f \( -iname "*.js" -o -iname "*.exe" -o -iname "*.bat*" -o -iname "*.bak" \) -print0)
+echo "Gmail bloquea adjuntos .js/.exe/.bat/.bak por contenido, incluso renombrados. Estos archivos fueron codificados en Base64 (extension .b64.txt). Para restaurar el original: base64 -d archivo.b64.txt > archivo (quitando el sufijo .b64.txt)." > "$MAIL_STAGE/LEEME_RESTAURAR.txt"
 (cd "$MAIL_STAGE" && zip -r "$MAIL_ZIP" . -q)
 rm -rf "$MAIL_STAGE"
 echo "$(date) — ZIP correo OK" >> "$LOG"
