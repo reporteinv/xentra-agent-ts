@@ -2,6 +2,7 @@ import express = require("express");
 import { Request, Response } from "express";
 import pool = require("../db");
 import { RowDataPacket } from "mysql2/promise";
+import { agentAuth } from "../middleware/agentAuth";
 const router = express.Router();
 
 // Crear comando desde el panel (sesion requerida)
@@ -23,11 +24,8 @@ router.post("/api/comandos/crear", async (req: Request, res: Response) => {
 });
 
 // Agente consulta comandos pendientes
-router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], async (req: Request, res: Response) => {
+router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["x-agent-token"];
-    if (token !== process.env.AGENT_TOKEN)
-      return res.status(401).json({ error: "Token invalido" });
     const [pcs] = await pool.query<RowDataPacket[]>("SELECT id FROM pcs WHERE serial=?", [req.params.serial]);
     if (!(pcs as any[]).length) return res.json({ hay: false });
     const pcId = (pcs as any[])[0].id;
@@ -37,18 +35,16 @@ router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], async (req: Re
     if (!(cmds as any[]).length) return res.json({ hay: false });
     const cmd = (cmds as any[])[0];
     await pool.query("UPDATE pcs_comandos SET estado='ejecutando' WHERE id=?", [cmd.id]);
-    res.json({ hay: true, id: cmd.id, comando: cmd.comando, params: cmd.params });
+    const parsedParams = cmd.params ? (typeof cmd.params === "string" ? JSON.parse(cmd.params) : cmd.params) : null;
+    res.json({ hay: true, id: cmd.id, comando: cmd.comando, params: parsedParams });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
 
 // Agente reporta resultado de comando
-router.post("/api/comandos/resultado", async (req: Request, res: Response) => {
+router.post("/api/comandos/resultado", agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["x-agent-token"];
-    if (token !== process.env.AGENT_TOKEN)
-      return res.status(401).json({ error: "Token invalido" });
     const { id, estado, output, mb_liberados, espacio_libre_gb } = req.body;
     if (!id) return res.status(400).json({ error: "id requerido" });
     await pool.query(

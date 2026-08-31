@@ -2,18 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const pool = require("../db");
+const agentAuth_1 = require("../middleware/agentAuth");
 const router = (0, express_1.Router)();
 // ============================================================
 //  POST /api/impresora/snmp-reporte
 //  Recibe datos SNMP de impresoras + trabajos de impresion
 //  Auth: x-agent-token
 // ============================================================
-router.post('/snmp-reporte', async (req, res) => {
+router.post('/snmp-reporte', agentAuth_1.agentAuth, async (req, res) => {
     try {
-        const token = req.headers["x-agent-token"];
-        if (token !== process.env.AGENT_TOKEN)
-            return res.status(401).json({ error: "Token invalido" });
-        const { serial, empresa_id, impresoras, trabajos, timestamp } = req.body;
+        const { serial, impresoras, trabajos, timestamp } = req.body;
+        const empresa_id = req.apiEmpresaId;
         if (!serial || !empresa_id) {
             return res.status(400).json({ ok: false, error: 'serial y empresa_id requeridos' });
         }

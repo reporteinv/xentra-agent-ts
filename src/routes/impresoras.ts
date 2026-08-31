@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import pool = require('../db')
+import { agentAuth } from '../middleware/agentAuth'
 
 
 const router = Router()
@@ -9,12 +10,10 @@ const router = Router()
 //  Recibe datos SNMP de impresoras + trabajos de impresion
 //  Auth: x-agent-token
 // ============================================================
-router.post('/snmp-reporte', async (req: Request, res: Response) => {
+router.post('/snmp-reporte', agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["x-agent-token"];
-    if (token !== process.env.AGENT_TOKEN)
-      return res.status(401).json({ error: "Token invalido" });
-    const { serial, empresa_id, impresoras, trabajos, timestamp } = req.body
+    const { serial, impresoras, trabajos, timestamp } = req.body
+    const empresa_id = (req as any).apiEmpresaId
 
     if (!serial || !empresa_id) {
       return res.status(400).json({ ok: false, error: 'serial y empresa_id requeridos' })

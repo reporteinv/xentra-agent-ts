@@ -1,6 +1,7 @@
 "use strict";
 const express = require("express");
 const pool = require("../db");
+const agentAuth_1 = require("../middleware/agentAuth");
 const router = express.Router();
 // Crear comando desde el panel (sesion requerida)
 router.post("/api/comandos/crear", async (req, res) => {
@@ -19,11 +20,8 @@ router.post("/api/comandos/crear", async (req, res) => {
     }
 });
 // Agente consulta comandos pendientes
-router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], async (req, res) => {
+router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], agentAuth_1.agentAuth, async (req, res) => {
     try {
-        const token = req.headers["x-agent-token"];
-        if (token !== process.env.AGENT_TOKEN)
-            return res.status(401).json({ error: "Token invalido" });
         const [pcs] = await pool.query("SELECT id FROM pcs WHERE serial=?", [req.params.serial]);
         if (!pcs.length)
             return res.json({ hay: false });
@@ -33,18 +31,16 @@ router.get(["/api/comandos/:serial", "/api/pc/comandos/:serial"], async (req, re
             return res.json({ hay: false });
         const cmd = cmds[0];
         await pool.query("UPDATE pcs_comandos SET estado='ejecutando' WHERE id=?", [cmd.id]);
-        res.json({ hay: true, id: cmd.id, comando: cmd.comando, params: cmd.params });
+        const parsedParams = cmd.params ? (typeof cmd.params === "string" ? JSON.parse(cmd.params) : cmd.params) : null;
+        res.json({ hay: true, id: cmd.id, comando: cmd.comando, params: parsedParams });
     }
     catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 // Agente reporta resultado de comando
-router.post("/api/comandos/resultado", async (req, res) => {
+router.post("/api/comandos/resultado", agentAuth_1.agentAuth, async (req, res) => {
     try {
-        const token = req.headers["x-agent-token"];
-        if (token !== process.env.AGENT_TOKEN)
-            return res.status(401).json({ error: "Token invalido" });
         const { id, estado, output, mb_liberados, espacio_libre_gb } = req.body;
         if (!id)
             return res.status(400).json({ error: "id requerido" });

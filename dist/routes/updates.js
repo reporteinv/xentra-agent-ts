@@ -2,12 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const pool = require("../db");
+const agentAuth_1 = require("../middleware/agentAuth");
 const router = express.Router();
 // POST /api/update/inicio — PC notifica que va a actualizar
-router.post('/api/update/inicio', async (req, res) => {
+router.post('/api/update/inicio', agentAuth_1.agentAuth, async (req, res) => {
     try {
-        const { serial, empresa_id, version_anterior, version_nueva, sha256_esperado } = req.body;
-        if (!serial || !empresa_id)
+        const { serial, version_anterior, version_nueva, sha256_esperado } = req.body;
+        const empresa_id = req.apiEmpresaId;
+        if (!serial)
             return res.status(400).json({ error: 'Faltan campos' });
         await pool.query(`INSERT INTO pcs_updates (serial, empresa_id, version_anterior, version_nueva, sha256_esperado, status, fecha_inicio)
        VALUES (?, ?, ?, ?, ?, 'iniciando', NOW())`, [serial, empresa_id, version_anterior, version_nueva, sha256_esperado]);
@@ -18,9 +20,10 @@ router.post('/api/update/inicio', async (req, res) => {
     }
 });
 // POST /api/update/resultado — PC notifica resultado del update
-router.post('/api/update/resultado', async (req, res) => {
+router.post('/api/update/resultado', agentAuth_1.agentAuth, async (req, res) => {
     try {
-        const { serial, empresa_id, version_nueva, status, motivo } = req.body;
+        const { serial, version_nueva, status, motivo } = req.body;
+        const empresa_id = req.apiEmpresaId;
         if (!serial || !status)
             return res.status(400).json({ error: 'Faltan campos' });
         await pool.query(`UPDATE pcs_updates SET status=?, motivo=?, fecha_fin=NOW()

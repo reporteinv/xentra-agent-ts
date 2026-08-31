@@ -1,5 +1,6 @@
 import express = require("express");
 import { logInfo, logError, logWarn } from '../modules/logger';
+import { agentAuth } from '../middleware/agentAuth';
 import { Request, Response } from "express";
 import pool = require("../db");
 import { RowDataPacket } from "mysql2/promise";
@@ -60,28 +61,24 @@ router.get("/limpieza", (req: Request, res: Response) =>
   res.sendFile(path.join(__dirname, "../../public/limpieza.html")),
 );
 
-router.post("/api/pc/reportar", async (req: Request, res: Response) => {
+router.post("/api/pc/reportar", agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["x-agent-token"];
-    if (token !== process.env.AGENT_TOKEN)
-      return res.status(401).json({ error: "Token invalido" });
     const d = req.body;
-    if (!d.serial || !d.empresa_id) return res.status(400).json({ error: "serial y empresa_id requeridos" });
-    const empresaIdNum = parseInt(d.empresa_id);
-    if (isNaN(empresaIdNum)) return res.status(400).json({ error: "empresa_id invalido" });
-    d.empresa_id = empresaIdNum;
+    if (!d.serial) return res.status(400).json({ error: "serial requerido" });
+    // empresa_id se resuelve del token (agentAuth), nunca del body — el agente no lo declara
+    d.empresa_id = (req as any).apiEmpresaId;
     await pool.query(`
       INSERT INTO pcs (empresa_id, serial, nombre_equipo, modelo, tipo_equipo, usuario, ip_local, ip_tipo, mac,
         tipo_red, adaptador_red, velocidad_red, ram_gb, ram_libre_gb, marca_ram, procesador, gpu,
         motherboard, bios_version, disco_total_gb, disco_libre_gb, tipo_disco, marca_disco, bus_disco,
-        disco_salud, disco_temp, disco_desgaste, cpu_temp,
+        disco_salud, disco_temp, disco_desgaste, disco_horas, cpu_temp,
         version_windows, arquitectura, win_activado, win_licencia, win_canal, win_clave_parcial, fecha_inst_so, ultimo_update, bitlocker, dominio,
         office_producto, office_version, antivirus, resolucion, impresora, hojas_impresas_hoy, uptime_horas,
         mb_liberados_ultima, ultima_limpieza, version_agente, bateria,
         garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos,
         fabricante_cpu, tiene_npu, npu_nombre, es_ai_ready, tiene_tpm, tpm_version, secure_boot, tiene_vpro,
         cpu_uso_pct, ram_uso_pct, disco_io_pct, offline_buffered, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
         empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
@@ -92,7 +89,7 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
         bios_version=VALUES(bios_version), disco_total_gb=VALUES(disco_total_gb),
         disco_libre_gb=VALUES(disco_libre_gb), tipo_disco=VALUES(tipo_disco),
         marca_disco=VALUES(marca_disco), bus_disco=VALUES(bus_disco),
-        disco_salud=VALUES(disco_salud), disco_temp=VALUES(disco_temp), disco_desgaste=VALUES(disco_desgaste), cpu_temp=VALUES(cpu_temp),
+        disco_salud=VALUES(disco_salud), disco_temp=VALUES(disco_temp), disco_desgaste=VALUES(disco_desgaste), disco_horas=VALUES(disco_horas), cpu_temp=VALUES(cpu_temp),
         version_windows=VALUES(version_windows), arquitectura=VALUES(arquitectura),
         win_activado=VALUES(win_activado), win_licencia=VALUES(win_licencia), win_canal=VALUES(win_canal), win_clave_parcial=VALUES(win_clave_parcial), fecha_inst_so=VALUES(fecha_inst_so),
         ultimo_update=VALUES(ultimo_update), bitlocker=VALUES(bitlocker), dominio=VALUES(dominio),
@@ -123,7 +120,7 @@ router.post("/api/pc/reportar", async (req: Request, res: Response) => {
       d.procesador||null, d.gpu||null, d.motherboard||null, d.bios_version||null,
       d.disco_total_gb||null, d.disco_libre_gb||null, d.tipo_disco||null, d.marca_disco||null,
       d.bus_disco||null, d.disco_salud||null, d.disco_temp!=null?d.disco_temp:null,
-      d.disco_desgaste!=null?d.disco_desgaste:null, d.cpu_temp!=null?d.cpu_temp:null,
+      d.disco_desgaste!=null?d.disco_desgaste:null, d.disco_horas!=null?d.disco_horas:null, d.cpu_temp!=null?d.cpu_temp:null,
       d.version_windows||null, d.arquitectura||null,
       d.win_activado!=null?d.win_activado:null, d.win_licencia||null, d.win_canal||null, d.win_clave_parcial||null, d.fecha_inst_so||null, d.ultimo_update||null,
       d.bitlocker!=null?d.bitlocker:null, d.dominio||null, d.office_producto||null,
@@ -304,10 +301,8 @@ router.post("/api/pcs/:serial/usb", async (req: Request, res: Response) => {
 
 
 // POST /api/evento-red
-router.post("/api/evento-red", async (req: Request, res: Response) => {
+router.post("/api/evento-red", agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers['x-agent-token'];
-    if (token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'Token invalido' });
     const d = req.body;
     if (!d.serial) return res.status(400).json({ error: 'serial requerido' });
     const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=?', [d.serial]);
@@ -339,10 +334,8 @@ router.get("/api/eventos-red/:serial", async (req: Request, res: Response) => {
 
 export = router;
 
-router.get('/api/pc/comando-limpieza/:serial', async (req: Request, res: Response) => {
+router.get('/api/pc/comando-limpieza/:serial', agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers['x-agent-token'];
-    if (token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'Token invalido' });
     const [pcRows] = await pool.query<RowDataPacket[]>('SELECT id FROM pcs WHERE serial=? AND activo=1', [req.params.serial]);
     const pc = (pcRows as any[])[0];
     if (!pc) return res.json({ limpiar: false });
@@ -362,11 +355,8 @@ router.get('/api/pc/comando-limpieza/:serial', async (req: Request, res: Respons
 });
 
 // ENDPOINT: recibir programas del agente
-router.post("/api/pc/programas", async (req: Request, res: Response) => {
+router.post("/api/pc/programas", agentAuth, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["x-agent-token"];
-    if (token !== process.env.AGENT_TOKEN)
-      return res.status(401).json({ error: "Token invalido" });
     const { serial, programas } = req.body;
     if (!serial || !programas)
       return res.status(400).json({ error: "Datos requeridos" });
@@ -389,6 +379,22 @@ router.post("/api/pc/programas", async (req: Request, res: Response) => {
     res.json({ ok: true, total: programas.length });
   } catch (err: any) {
     res.status(500).json({ error: "Error interno" });
+  }
+});
+
+
+// ENDPOINT: actualizar solo metricas de rendimiento (CPU/RAM/Disco)
+router.post("/api/pc/metricas", agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { serial, cpu_uso_pct, ram_uso_pct, disco_io_pct } = req.body;
+    if (!serial) return res.status(400).json({ error: "serial requerido" });
+    await pool.query(
+      `UPDATE pcs SET cpu_uso_pct=?, ram_uso_pct=?, disco_io_pct=?, ultimo_reporte=NOW() WHERE serial=?`,
+      [cpu_uso_pct??null, ram_uso_pct??null, disco_io_pct??null, serial]
+    );
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

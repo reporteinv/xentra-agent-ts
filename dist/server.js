@@ -165,6 +165,7 @@ const licencias_1 = __importDefault(require("./routes/licencias"));
 const updates_1 = __importDefault(require("./routes/updates"));
 const software_1 = __importDefault(require("./routes/software"));
 const impresoras_1 = __importDefault(require("./routes/impresoras"));
+const instalador_go_1 = __importDefault(require("./routes/instalador-go"));
 app.use(authRouter);
 app.use(pcsRouter);
 app.use(statsRouter);
@@ -176,6 +177,7 @@ app.use(licencias_1.default);
 app.use(updates_1.default);
 app.use(software_1.default);
 app.use("/api/impresora", impresoras_1.default);
+app.use(instalador_go_1.default);
 app.get("/health", (req, res) => res.json({ ok: true, service: "xentra-agent-ts" }));
 app.use(public_1.default);
 app.use(tokens_1.default);
@@ -221,7 +223,8 @@ app.get('/api/version/lista', (req, res) => {
                 tamano_mb: (stat.size / 1024 / 1024).toFixed(1)
             };
         })
-            .sort((a, b) => b.version.localeCompare(a.version));
+            .sort((a, b) => b.version.localeCompare(a.version))
+            .slice(0, 2); // mostrar solo las 2 versiones mas recientes
         res.json({ activa: getVersionActiva(), versiones: archivos });
     }
     catch (e) {

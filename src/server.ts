@@ -154,6 +154,7 @@ import licenciasRouter from "./routes/licencias";
 import updatesRouter from "./routes/updates";
 import softwareRouter from "./routes/software";
 import impresorasRouter from "./routes/impresoras";
+import instaladorGoRouter from "./routes/instalador-go";
 
 app.use(authRouter);
 app.use(pcsRouter);
@@ -166,6 +167,7 @@ app.use(licenciasRouter);
 app.use(updatesRouter);
 app.use(softwareRouter);
 app.use("/api/impresora", impresorasRouter);
+app.use(instaladorGoRouter);
 
 app.get("/health", (req, res) =>
   res.json({ ok: true, service: "xentra-agent-ts" }),
@@ -213,7 +215,8 @@ app.get('/api/version/lista', (req, res) => {
           tamano_mb: (stat.size / 1024 / 1024).toFixed(1)
         };
       })
-      .sort((a, b) => b.version.localeCompare(a.version));
+      .sort((a, b) => b.version.localeCompare(a.version))
+      .slice(0, 2); // mostrar solo las 2 versiones mas recientes
     res.json({ activa: getVersionActiva(), versiones: archivos });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo leer el directorio de versiones' });

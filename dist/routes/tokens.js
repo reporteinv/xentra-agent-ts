@@ -27,8 +27,11 @@ router.get('/api/tokens', authCheck, async (req, res) => {
 // POST — generar nuevo token
 router.post('/api/tokens', authCheck, async (req, res) => {
     try {
-        const empresaId = req.session.empresa_id || 26;
-        const { descripcion, expira_en } = req.body;
+        // Login unico (Ungrd/Ungrd.2026) sin roles — quien pasa authCheck ya
+        // tiene control total, puede especificar empresa_id para el cliente
+        // al que le esta generando el token.
+        const { descripcion, expira_en, empresa_id: empresaIdBody } = req.body;
+        const empresaId = empresaIdBody ? parseInt(empresaIdBody) : (req.session.empresa_id || 26);
         const token = 'xnt_' + crypto_1.default.randomBytes(24).toString('hex');
         await db_1.default.query(`INSERT INTO api_tokens (empresa_id, token, descripcion, expira_en) VALUES (?,?,?,?)`, [empresaId, token, descripcion || 'Token API', expira_en || null]);
         res.json({ ok: true, token });
