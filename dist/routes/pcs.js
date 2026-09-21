@@ -58,7 +58,7 @@ router.post("/api/pc/reportar", agentAuth_1.agentAuth, async (req, res) => {
         // empresa_id se resuelve del token (agentAuth), nunca del body — el agente no lo declara
         d.empresa_id = req.apiEmpresaId;
         await pool.query(`
-      INSERT INTO pcs (empresa_id, serial, nombre_equipo, modelo, tipo_equipo, usuario, ip_local, ip_tipo, mac,
+      INSERT INTO pcs (empresa_id, serial, nombre_equipo, modelo, marca, tipo_equipo, usuario, ip_local, ip_tipo, mac,
         tipo_red, adaptador_red, velocidad_red, ram_gb, ram_libre_gb, marca_ram, procesador, gpu,
         motherboard, bios_version, disco_total_gb, disco_libre_gb, tipo_disco, marca_disco, bus_disco,
         disco_salud, disco_temp, disco_desgaste, disco_horas, cpu_temp,
@@ -68,9 +68,9 @@ router.post("/api/pc/reportar", agentAuth_1.agentAuth, async (req, res) => {
         garantia_status, garantia_inicio, garantia_fin, discos, monitores, ram_modulos,
         fabricante_cpu, tiene_npu, npu_nombre, es_ai_ready, tiene_tpm, tpm_version, secure_boot, tiene_vpro,
         cpu_uso_pct, ram_uso_pct, disco_io_pct, offline_buffered, ultimo_reporte)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
       ON DUPLICATE KEY UPDATE
-        empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), tipo_equipo=VALUES(tipo_equipo),
+        empresa_id=VALUES(empresa_id), nombre_equipo=VALUES(nombre_equipo), modelo=VALUES(modelo), marca=VALUES(marca), tipo_equipo=VALUES(tipo_equipo),
         usuario=CASE WHEN VALUES(usuario) IS NOT NULL AND VALUES(usuario)!='' THEN VALUES(usuario) ELSE usuario END,
         ip_local=VALUES(ip_local), ip_tipo=VALUES(ip_tipo), mac=VALUES(mac), tipo_red=VALUES(tipo_red),
         adaptador_red=VALUES(adaptador_red), velocidad_red=VALUES(velocidad_red),
@@ -104,7 +104,7 @@ router.post("/api/pc/reportar", agentAuth_1.agentAuth, async (req, res) => {
         offline_buffered=VALUES(offline_buffered),
         activo=1, ultimo_reporte=NOW()
     `, [
-            d.empresa_id, d.serial, d.nombre_equipo || null, d.modelo || null, d.tipo_equipo || null,
+            d.empresa_id, d.serial, d.nombre_equipo || null, d.modelo || null, d.marca || null, d.tipo_equipo || null,
             d.usuario || null, d.ip_local || null, d.ip_tipo || null, d.mac || null, d.tipo_red || null, d.adaptador_red || null,
             d.velocidad_red || null, d.ram_gb || null, d.ram_libre_gb || null, d.marca_ram || null,
             d.procesador || null, d.gpu || null, d.motherboard || null, d.bios_version || null,
