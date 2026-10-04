@@ -10,6 +10,7 @@ ENV_FILE="/var/www/impresoras-ts/.env"
 echo "$(date) — Iniciando backup xentra-agent-ts..." >> "$LOG"
 
 # Crear directorios destino
+if ! mountpoint -q /media/backup_sd; then echo "$(date) — ERROR SD no montada, no se escribe" >> "$LOG"; /var/www/impresoras-ts/scripts/notificar-sd.sh "ALERTA: SD no montada - backup semanal xentra-agent-ts NO se hizo" "backup.sh de xentra-agent-ts no pudo escribir en /media/backup_sd." >> "$LOG" 2>&1; exit 1; fi
 mkdir -p "$SD_DIR" "$NVME_DIR"
 
 # ── 1. ZIP del código xentra-agent-ts ──────────────────────────────────────
