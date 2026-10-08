@@ -9,14 +9,33 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }
 });
 
-async function enviarWhatsApp(mensaje: string): Promise<void> {
-  const phone   = process.env.CALLMEBOT_PHONE;
-  const apikey  = process.env.CALLMEBOT_APIKEY;
-  if (!phone || !apikey) return;
-  const texto   = encodeURIComponent(mensaje);
-  const url     = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${texto}&apikey=${apikey}`;
-  await new Promise<void>((resolve) => {
-    https.get(url, () => resolve()).on('error', () => resolve());
+// Antes CallMeBot (WhatsApp); desde 8 oct 2026 Telegram (CallMeBot sin mensajes gratis).
+// Se mantiene el nombre para no cambiar a quien la llama. Devuelve true solo si Telegram confirma.
+async function enviarWhatsApp(mensaje: string): Promise<boolean> {
+  const token  = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const fallo = (motivo: string) =>
+    console.error(JSON.stringify({ timestamp: new Date().toISOString(), nivel: 'error', evento: 'ALERTA_TELEGRAM_ERROR', error: motivo }));
+  if (!token || !chatId) { fallo('Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en .env'); return false; }
+  const body = JSON.stringify({ chat_id: chatId, text: mensaje });
+  return await new Promise<boolean>((resolve) => {
+    const req = https.request(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST', timeout: 15000,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let d = '';
+      res.on('data', (c) => (d += c));
+      res.on('end', () => {
+        let ok = false;
+        try { ok = JSON.parse(d).ok === true; } catch {}
+        if (!ok) fallo(`HTTP ${res.statusCode}: ${d.slice(0, 200)}`);
+        resolve(ok);
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', (e) => { fallo(e.message); resolve(false); });
+    req.write(body);
+    req.end();
   });
 }
 
